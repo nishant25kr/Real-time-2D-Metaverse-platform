@@ -1,3 +1,4 @@
+import { OutgoingMessage } from "../src/types";
 import type { User } from "./User";
 
 export class RoomManager{
@@ -14,9 +15,21 @@ export class RoomManager{
         return this.instance;
     }
 
-    public addUser(spaceId: string, userId: User){
-        this.rooms.set(spaceId , [...this.rooms.get(spaceId), userId])
+    public addUser(spaceId: string, user: User){
+        if(!this.rooms.has(spaceId)){
+            this.rooms.set(spaceId, [user])
+        }
+        this.rooms.set(spaceId ,[...(this.rooms.get(spaceId) ?? []), user])
     }
-    
 
+    public broadcast(message: OutgoingMessage, user :User , roomId:string){
+        if(!this.rooms.has(roomId)){
+            return ;
+        }
+        this.rooms.get(roomId).forEach((x) => {
+            if(x != user){
+                x.ws.send(JSON.stringify(message))
+            }
+        })
+    }
 }

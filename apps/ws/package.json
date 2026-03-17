@@ -13,9 +13,14 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "ws": "^1.0.0"
+    "@repo/db": "*",
+    "@types/jsonwebtoken": "^9.0.10",
+    "jsonwebtoken": "^9.0.3",
+    "ws": "^1.1.5"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1"
+    "@types/ws": "^8.18.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
