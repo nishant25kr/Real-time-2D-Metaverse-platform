@@ -1,13 +1,21 @@
-import { WebSocketServer } from 'ws';
+import { createRequire } from "node:module";
+import type WebSocket from "ws";
+import { User } from "./Managers/User.js";
 
-const wss = new WebSocketServer({ port: 8080 });
+const require = createRequire(import.meta.url);
+const wsPkg = require("ws");
 
-wss.on('connection', function connection(ws) {
-  ws.on('error', console.error);
+const WSServer = wsPkg.Server;
 
-  ws.on('message', function message(data) {
-    console.log('received: %s', data);
+const wss = new WSServer({ port: 8080 });
+
+wss.on("connect", (socket: WebSocket) => {
+  console.log('WebSocket Client Connected');
+  socket.on("error", console.error);
+
+  let user = new User(socket);
+
+  socket.on("close", () => {
+    user?.destroy();
   });
-
-  ws.send('something');
 });

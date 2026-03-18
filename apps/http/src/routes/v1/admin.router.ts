@@ -116,7 +116,7 @@ adminRouter.get("/avatar", adminMiddleware, async (req, res) => {
         }
 
         return res.status(200).json({
-            avatars: avatars.map(a => ({
+            avatars: avatars.map((a:any) => ({
                 "id": a.id,
                 "imageUrl": a.imageUrl
             }))

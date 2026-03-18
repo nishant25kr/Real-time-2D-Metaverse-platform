@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "node dist/index.js",
-    "dev:watch": "npx tsx src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
   },
   "type": "module",
   "keywords": [],

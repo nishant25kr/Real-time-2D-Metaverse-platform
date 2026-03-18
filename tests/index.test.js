@@ -1,4 +1,6 @@
 import axios2 from "axios"
+import { useId } from "react"
+import WebSocket from "ws"
 
 const BACKEND_URL = "http://localhost:3000"
 const WS_BACKEND_URL = "ws://localhost:3001"
@@ -813,7 +815,6 @@ describe("WebSocket tests", () => {
         })
 
         adminToken = res.data.token
-
         const User_signUpRes = await axios.post(`${BACKEND_URL}/api/v1/signup`, {
             username: username + "user",
             password,
@@ -905,67 +906,74 @@ describe("WebSocket tests", () => {
     }
 
     async function WebSocketSetup() {
+        console.log("inside wesocketSetup")
         ws1 = new WebSocket(WS_BACKEND_URL)
+        console.log("after ws")
+        ws1.onmessage = (event) => {
+            console.log("got back adata 1")
+            console.log(event.data)
+
+            ws1Messages.push(JSON.parse(event.data))
+        }
+        console.log("after onmessage")
+        await new Promise(r => {
+            ws1.onopen = r
+        })
+        console.log("after onmessage")
+        
         ws2 = new WebSocket(WS_BACKEND_URL)
-
-        await new Promise((resolve) => {
-            ws1.onopen = resolve
-        })
-
-        await new Promise((resolve) => {
-            ws2.onopen = resolve
-        })
-
-        ws1.onmessage = (message) => {
-            ws1Messages.push(JSON.parse(message.data))
+        console.log("after onmessage")
+        
+        ws2.onmessage = (event) => {
+            console.log("got back data 2")
+            console.log(event.data)
+            ws2Messages.push(JSON.parse(event.data))
         }
-
-        ws2.onmessage = (message) => {
-            ws2Messages.push(JSON.parse(message.data))
-        }
+        console.log("after onmessage")
+        await new Promise(r => {
+            ws2.onopen = r
+        })
+        console.log("after onmessage")
     }
 
     beforeAll(async () => {
-        HttpSetup();
-        WebSocketSetup()
+        await HttpSetup();
+        await WebSocketSetup()
     })
 
-    //     test("Get back ack for joining the space",()=>{
+    test("Get back ack for joining the space", () => {
+        console.log("spaceID", spaceId)
+        console.log("admintoken", adminToken)
+        ws1.send(JSON.stringify({
+            "type": "join",
+            "payload": {
+                "spaceId": spaceId,
+                "token": adminToken
+            }
+        }))
 
+        ws2.send(JSON.stringify({
+            "type": "join",
+            "payload": {
+                "spaceId": spaceId,
+                "token": userToken
+            }
+        }))
 
-    //         ws1.send(JSON.stringify({
-    //             "type":"join",
-    //             "payload":{
-    //                 "spaceId":spaceId,
-    //                 "token":adminToken
-    //             }
-    //         }))
+        const message1 = waitForAndPopLatestMessage(ws1Messages)
+        const message2 = waitForAndPopLatestMessage(ws2Messages)
 
-    //         ws2.send(JSON.stringify({
-    //             "type":"join",
-    //             "payload":{
-    //                 "spaceId":spaceId,
-    //                 "token":userToken
-    //             }
-    //         }))
+        expect(message1.type).toBe("space-joined")
+        expect(message2.type).toBe("space-joined")
 
-    //         const message1 = waitForAndPopLatestMessage(ws1Messages)
-    //         const message2 = waitForAndPopLatestMessage(ws2Messages)
+        expect(message1.payload.users.length + message1.payload.users.length).toBe(1)
 
-    //         expect(message1.type).toBe("space-joined")
-    //         expect(message2.type).toBe("space-joined")
+        adminX = message1.payload.spawn.x
+        adminY = message1.payload.spawn.y
 
-    //         expect(message1.payload.users.length + message1.payload.users.length).toBe(1)
-
-    //         adminX = message1.payload.spawn.x
-    //         adminY = message1.payload.spawn.y
-
-    //         userY = message2.payload.spawn.y
-    //         userY = message2.payload.spawn.y
-
-
-
-    //     })
+        userY = message2.payload.spawn.y
+        userY = message2.payload.spawn.y
+    })
 
     //     test("User should not be able to move across the boundary",()=>{
     //         ws1.send(JSON.stringify({

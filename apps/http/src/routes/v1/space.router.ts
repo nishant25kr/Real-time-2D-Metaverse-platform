@@ -8,7 +8,7 @@ export const spaceRouter = Router()
 spaceRouter.post("/", userMiddleware, async (req, res) => {
 
     const parsedData = CreateSpaceSchema.safeParse(req.body)
-
+    console.log("parsed data",parsedData.data)
     if (!parsedData.success) {
         return res.status(400).json({
             message: "Invalid input"
@@ -25,8 +25,8 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
         const space = await client.space.create({
             data: {
                 name: parsedData.data.name,
-                width: parseInt(parsedData.data.width),
-                height: parseInt(parsedData.data.height),
+                width: parsedData.data.width,
+                height: parsedData.data.height,
                 creatorId: req.userId!
             }
         });
@@ -50,14 +50,14 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
         const space = await client.space.create({
             data: {
                 name: parsedData.data.name,
-                width: map.width,
-                height: map.height,
+                width: map.width.toString(),
+                height: map.height.toString(),
                 creatorId: req.userId!,
             }
         });
 
         await client.spaceElements.createMany({
-            data: map.mapElements.map(e => ({
+            data: map.mapElements.map((e: any) => ({
                 spaceId: space.id,
                 elementId: e.elementId,
                 x: e.x!,
@@ -186,7 +186,7 @@ spaceRouter.get("/all", async (req, res) => {
     }
 
     res.status(200).json({
-        spaces: spaces.map(s => ({
+        spaces: spaces.map((s: any) => ({
             id: s.id,
             name: s.name,
             dimensions: s.width + "x" + s.height,
