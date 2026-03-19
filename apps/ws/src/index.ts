@@ -9,13 +9,14 @@ const WSServer = wsPkg.Server;
 
 const wss = new WSServer({ port: 8080 });
 
-wss.on("connect", (socket: WebSocket) => {
+wss.on("connection", (ws: WebSocket) => {
   console.log('WebSocket Client Connected');
-  socket.on("error", console.error);
+  let user = new User(ws);
+  ws.on('error', console.error);
 
-  let user = new User(socket);
-
-  socket.on("close", () => {
+  ws.on('close', () => {
     user?.destroy();
   });
+
+  
 });

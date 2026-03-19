@@ -31,22 +31,23 @@ export class User {
         this.ws.on("message", async (data) => {
             const parsedData = JSON.parse(data.toString());
             switch (parsedData.type) {
+
                 case "join":
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
-                    console.log("token:", token);
-                    console.log("type:", typeof token);
-                    const user = jwt.verify(token, JWT_PASSWORD) 
-                    console.log('user',user)
-                    // if (!userId) {
-                    //     this.ws.close
-                    //     return;
-                    // }
+                    const user = jwt.verify(token, JWT_PASSWORD)
+
+                    const id = this.userId = (user as jwt.JwtPayload).userId;
+                    if (!id) {
+                        this.ws.close();
+                        return;
+                    }
 
                     // TODO: space dimentions will be fetched from db
 
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
+                    console.log(RoomManager.getInstance().rooms.get(spaceID)?.map((u) => ({ id: u.id })) ?? [])
                     this.x = Math.floor(Math.random() * 20)
                     this.y = Math.floor(Math.random() * 20)
                     this.ws.send(JSON.stringify({
@@ -64,7 +65,7 @@ export class User {
                         {
                             type: "user-joined",
                             payload: {
-                                useId: this.userId,
+                                userId: this.userId,
                                 x: this.x,
                                 y: this.y
                             }
@@ -75,6 +76,7 @@ export class User {
                     break;
 
                 case "move":
+                    console.log("parsedData", typeof parsedData)
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX)
@@ -103,7 +105,7 @@ export class User {
                                 x: this.x,
                                 y: this.y
                             }
-                        }))
+                        }));
                     }
 
             }
@@ -115,7 +117,7 @@ export class User {
             {
                 type: "user-left",
                 payload: {
-                    userId : this.userId,
+                    userId: this.userId,
                 }
             },
             this,

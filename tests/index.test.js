@@ -3,7 +3,7 @@ import { useId } from "react"
 import WebSocket from "ws"
 
 const BACKEND_URL = "http://localhost:3000"
-const WS_BACKEND_URL = "ws://localhost:3001"
+const WS_BACKEND_URL = "ws://localhost:8080"
 
 const axios = {
     post: async (...args) => {
@@ -892,7 +892,7 @@ describe("WebSocket tests", () => {
 
     function waitForAndPopLatestMessage(messageArray) {
         return new Promise((resolve) => {
-            if (messageArray.length() > 0) {
+            if (messageArray.length > 0) {
                 resolve(messageArray.shift())
             } else {
                 let interval = setTimeout(() => {
@@ -906,34 +906,29 @@ describe("WebSocket tests", () => {
     }
 
     async function WebSocketSetup() {
-        console.log("inside wesocketSetup")
         ws1 = new WebSocket(WS_BACKEND_URL)
-        console.log("after ws")
         ws1.onmessage = (event) => {
-            console.log("got back adata 1")
-            console.log(event.data)
-
             ws1Messages.push(JSON.parse(event.data))
         }
-        console.log("after onmessage")
-        await new Promise(r => {
+
+        await new Promise((r) => {
             ws1.onopen = r
         })
-        console.log("after onmessage")
-        
+
         ws2 = new WebSocket(WS_BACKEND_URL)
-        console.log("after onmessage")
-        
+
         ws2.onmessage = (event) => {
-            console.log("got back data 2")
-            console.log(event.data)
-            ws2Messages.push(JSON.parse(event.data))
+            ws1Messages.push(JSON.parse(event.data))
         }
-        console.log("after onmessage")
+
         await new Promise(r => {
             ws2.onopen = r
         })
-        console.log("after onmessage")
+
+        afterAll(() => {
+            ws.close();
+        });
+
     }
 
     beforeAll(async () => {
@@ -941,9 +936,8 @@ describe("WebSocket tests", () => {
         await WebSocketSetup()
     })
 
-    test("Get back ack for joining the space", () => {
-        console.log("spaceID", spaceId)
-        console.log("admintoken", adminToken)
+    test("Get back ack for joining the space", async () => {
+
         ws1.send(JSON.stringify({
             "type": "join",
             "payload": {
@@ -951,7 +945,8 @@ describe("WebSocket tests", () => {
                 "token": adminToken
             }
         }))
-
+        const message1 = await waitForAndPopLatestMessage(ws1Messages);
+        console.log("message2", message1)
         ws2.send(JSON.stringify({
             "type": "join",
             "payload": {
@@ -959,14 +954,21 @@ describe("WebSocket tests", () => {
                 "token": userToken
             }
         }))
+        const message2 = await waitForAndPopLatestMessage(ws1Messages);
+        console.log("message2", message2)
 
-        const message1 = waitForAndPopLatestMessage(ws1Messages)
-        const message2 = waitForAndPopLatestMessage(ws2Messages)
+        const message3 = await waitForAndPopLatestMessage(ws1Messages)
+        console.log("message3", message3)
+
 
         expect(message1.type).toBe("space-joined")
         expect(message2.type).toBe("space-joined")
-
-        expect(message1.payload.users.length + message1.payload.users.length).toBe(1)
+        expect(message1.payload.users.length).toBe(1)
+        expect(message2.payload.users.length).toBe(2)
+        expect(message3.type).toBe("user-joined");
+        expect(message3.payload.x).toBe(message2.payload.spawn.x);
+        expect(message3.payload.y).toBe(message2.payload.spawn.y);
+        expect(message3.payload.userId).toBe(userId);
 
         adminX = message1.payload.spawn.x
         adminY = message1.payload.spawn.y
@@ -975,23 +977,26 @@ describe("WebSocket tests", () => {
         userY = message2.payload.spawn.y
     })
 
+    test("User should not be able to move across the boundary", async () => {
+
+        ws1.send(JSON.stringify({
+            type: "move",
+            payload: {
+                x: 1000000,
+                y: 10000
+            }
+        }));
+
+        const message = await waitForAndPopLatestMessage(ws1Messages);
+        expect(message.type).toBe("movement-rejected")
+        expect(message.payload.x).toBe(adminX)
+        expect(message.payload.y).toBe(adminY)
+
+    })
+
     //     test("User should not be able to move across the boundary",()=>{
     //         ws1.send(JSON.stringify({
-    //             type:"movement",
-    //             payload:{
-    //                 x:100000,
-    //                 y:234000
-    //             }
-    //         }))
-
-    //         const message = waitForAndPopLatestMessage(ws1Messages)
-    //         expect(message.type).toBe("movement rejected")
-
-    //     })
-
-    //     test("User should not be able to move across the boundary",()=>{
-    //         ws1.send(JSON.stringify({
-    //             type:"movement",
+    //             type:"move",
     //             payload:{
     //                 x:adminX+2,
     //                 y:adminY+2
@@ -1005,7 +1010,7 @@ describe("WebSocket tests", () => {
 
     //     test("Correct movement sould be brodcasted to the other user",()=>{
     //         ws1.send(JSON.stringify({
-    //             type:"movement",
+    //             type:"move",
     //             payload:{
     //                 x:adminX+1,
     //                 y:adminY+1,
