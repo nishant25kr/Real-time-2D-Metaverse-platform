@@ -1,135 +1,69 @@
-# Turborepo starter
+# Meta-Verse 🌌
 
-This Turborepo starter is maintained by the Turborepo core team.
+A full-stack, real-time 2D Metaverse application. Users can create virtual spaces, customize avatars, interact with map elements, and move around to interact with others in real-time.
 
-## Using this example
+## Features
 
-Run the following command:
+### 👤 Users & Avatars
+- **Authentication:** Secure user registration and login using JWTs.
+- **Avatars:** Users can customize their digital appearance by selecting from a variety of avatars.
+- **Roles:** Role-based access control, offering special privileges to Admin users (e.g., creating base maps and elements).
 
-```sh
-npx create-turbo@latest
-```
+### 🌍 Spaces & Maps
+- **Custom Spaces:** Users can create their own virtual Spaces with custom dimensions (e.g., width & height).
+- **Elements:** Spaces can be populated with `Elements` (e.g., chairs, desks, walls).
+- **Predefined Maps:** The platform offers built-in default Maps that come pre-populated with map elements for users to explore.
 
-## What's inside?
+### 🏃‍♂️ Real-Time Interaction (WebSockets)
+The core of the Metaverse is driven by a custom WebSocket server managing real-time connections:
+- **Join Rooms:** When a user enters a space, they spawn at a calculated coordinate (X, Y) and are subscribed to events in that specific room.
+- **Live Movement (Broadcasting):** As the user walks around the map, their position is broadcasted to everyone else in the same room.
+- **Movement Validation:** Real-time cheat protection! The server calculates the displacement of coordinates `(moveX, moveY)` to ensure a player only moves 1 tile at a time. Illegal movements are immediately rejected by the server and re-synced.
+- **Presence Notifications:** All players in a room receive a real-time notification when a user joins or leaves.
 
-This Turborepo includes the following packages/apps:
+## Architecture & Codebase
 
-### Apps and Packages
+The platform is organized into three major pieces:
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+1. **HTTP Server (`apps/http`)**
+   Built with Express.js, providing the REST API for the application:
+   - `/api/v1/user`: Registration, login, and profile (avatar) updates.
+   - `/api/v1/space`: Creating custom spaces, fetching elements in a space, or dropping new map elements inside.
+   - `/api/v1/admin`: Admin-only routes for creating global `Elements`, `Maps`, and uploading `Avatars`.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+2. **WebSocket Server (`apps/ws`)**
+   Built with `ws`. Responsible for keeping the live state of all active connected WebSockets. It acts as a Room Manager that multiplexes players into their correct `spaceId`.
+   - Event handlers for `join`, `move`, `user-joined`, and `user-left`.
 
-### Utilities
+3. **Database (`packages/db`)**
+   The source of truth managing everything from players to XY-coordinates of elements. Powered by PostgreSQL and Prisma ORM.
 
-This Turborepo has some additional tools already setup for you:
+## Database Schema (Prisma)
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+The application uses a highly relational setup:
+- **User:** `id`, `username`, `password`, `avatarId`, `role`
+- **Space:** Defines `width`/`height` and belongs to a `User` (creator).
+- **Element:** Global objects with a specific `imageUrl`, `width`, `height`, and whether they are `static` (collidable).
+- **spaceElements / MapElements:** Junction tables mapping Elements to Spaces (or Maps) with specific `x, y` positions.
 
-### Build
+## Local Development
 
-To build all apps and packages, run the following command:
+### Prerequisites
+- Node.js (>= 18)
+- PostgreSQL
 
-```
-cd my-turborepo
+### Getting Started
+1. Clone the project and run `npm install` in the root directory.
+2. Set up your `.env` files with your `DATABASE_URL` and `JWT_SECRET`.
+3. Initialize the Prisma database:
+   ```bash
+   cd packages/db
+   npx prisma generate
+   npx prisma db push
+   ```
+4. Start both the HTTP and WebSocket servers concurrently from the root directory:
+   ```bash
+   npm run dev
+   ```
 
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+*(This repository is a monorepo powered by Turborepo, making it easy to run all projects concurrently).*
