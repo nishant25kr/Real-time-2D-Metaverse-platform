@@ -8,7 +8,6 @@ export const spaceRouter = Router()
 spaceRouter.post("/", userMiddleware, async (req, res) => {
 
     const parsedData = CreateSpaceSchema.safeParse(req.body)
-    console.log("parsed data",parsedData.data)
     if (!parsedData.success) {
         return res.status(400).json({
             message: "Invalid input"
