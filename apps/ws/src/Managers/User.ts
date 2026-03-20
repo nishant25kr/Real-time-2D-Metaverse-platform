@@ -47,7 +47,6 @@ export class User {
 
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    console.log(RoomManager.getInstance().rooms.get(spaceID)?.map((u) => ({ id: u.id })) ?? [])
                     this.x = Math.floor(Math.random() * 20)
                     this.y = Math.floor(Math.random() * 20)
                     this.ws.send(JSON.stringify({
@@ -76,13 +75,16 @@ export class User {
                     break;
 
                 case "move":
-                    console.log("parsedData", typeof parsedData)
+                    console.log("parsedData", parsedData)
+                    console.log("this.x", this.x)
+                    console.log("this.y", this.y)
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX)
                     const Ydisplacement = Math.abs(this.y - moveY)
 
                     if ((Xdisplacement == 1 && Ydisplacement == 1) || (Xdisplacement == 0 && Ydisplacement == 1)) {
+                        console.log("move is correct")
                         this.x = moveX
                         this.y = moveY
                         RoomManager.getInstance().broadcast(
@@ -99,6 +101,7 @@ export class User {
                         return
                     }
                     else {
+                        console.log("move is not correct")
                         this.ws.send(JSON.stringify({
                             type: "movement-rejected",
                             payload: {
