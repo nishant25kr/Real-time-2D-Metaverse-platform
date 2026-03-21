@@ -15,6 +15,7 @@ export const Signup = () => {
             type
         })
         setUserId(res.data.userId)
+        localStorage.setItem("userId", res.data.userId)
 
     }
 
