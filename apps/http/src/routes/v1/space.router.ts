@@ -147,37 +147,10 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
     });
 });
 
-spaceRouter.get("/:spaceId", async (req, res) => {
-    const spaceId = req.params.spaceId as string;
-    if (!spaceId) {
-        return res.status(400).json({
-            message: "no spaceId"
-        })
-    }
-    const space = await client.space.findUnique({
-        where: {
-            id: spaceId
-        }
-    });
-    const element = await client.spaceElements.findMany({
-        where: {
-            spaceId: spaceId
-        }
-    })
-    if (!space) {
-        return res.status(400).json({
-            message: "Invalid id"
-        })
-    }
-
-    return res.status(200).json({
-        space: space,
-        element: element
-    })
-})
-
 spaceRouter.get("/all", async (req, res) => {
+    console.log("hello from all space")
     const spaces = await client.space.findMany()
+    console.log('spaces',spaces)
     if (!spaces) {
         return res.status(400).json({
             message: "Spaces not available"
@@ -230,4 +203,31 @@ spaceRouter.post("/element", userMiddleware, async (req, res) => {
     })
 })
 
+spaceRouter.get("/:spaceId", async (req, res) => {
+    const spaceId = req.params.spaceId as string;
+    if (!spaceId) {
+        return res.status(400).json({
+            message: "no spaceId"
+        })
+    }
+    const space = await client.space.findUnique({
+        where: {
+            id: spaceId
+        }
+    });
+    const element = await client.spaceElements.findMany({
+        where: {
+            spaceId: spaceId
+        }
+    })
+    if (!space) {
+        return res.status(400).json({
+            message: "Invalid id"
+        })
+    }
 
+    return res.status(200).json({
+        space: space,
+        element: element
+    })
+})

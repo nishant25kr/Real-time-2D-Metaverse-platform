@@ -30,7 +30,6 @@ export const CreateSpaceSchema = z.object({
     width: z.string().regex(/^[0-9]{1,4}$/),
     height: z.string().regex(/^[0-9]{1,4}$/),
     mapId: z.string() || null,
-
 })
 
 export const AddElementSchema = z.object({

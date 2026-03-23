@@ -17,6 +17,7 @@ function App() {
         <Route path='/arena/:id' element={<Arena/>} />
         <Route path='/avatar' element={<Avatar/>} />
         <Route path='/dashboard' element={<Dashboard/>} />
+        <Route path='/space' element={<Arena/>} />
       </Routes>
     </BrowserRouter>
   )
