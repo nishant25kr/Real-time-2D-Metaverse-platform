@@ -2,7 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { Landing } from './Pages/Landing'
 import { Signup } from './Pages/Singup'
-import { Arena } from './Pages/Arean'
+import { Arena } from './Pages/Arena'
 import { Avatar } from './Pages/Avatar'
 import { Dashboard } from './Pages/Dashboard'
 

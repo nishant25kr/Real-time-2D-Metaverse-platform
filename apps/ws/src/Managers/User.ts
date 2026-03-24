@@ -3,7 +3,7 @@ import type WebSocket from "ws";
 import { RoomManager } from "./RoomManagers.js";
 import jwt from 'jsonwebtoken';
 import { JWT_PASSWORD } from "../config.js";
-
+import client from "@repo/db"
 
 function getRandomId(length: number) {
     const character = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890qoeruqojdnksncadlfjk;l"
@@ -17,9 +17,9 @@ function getRandomId(length: number) {
 export class User {
     public id: string;
     private spaceId?: string;
-    private x: number;
-    private y: number;
-    private userId?: string
+    public x: number;
+    public y: number;
+    public userId?: string
     constructor(public ws: WebSocket) {
         this.id = getRandomId(10);
         this.x = 0;
@@ -36,19 +36,20 @@ export class User {
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
                     const user = jwt.verify(token, JWT_PASSWORD)
-
                     const id = this.userId = (user as jwt.JwtPayload).userId;
                     if (!id) {
                         this.ws.close();
                         return;
                     }
-
-                    // TODO: space dimentions will be fetched from db
-
+                    const space = await client.space.findUnique({
+                        where:{
+                            id: spaceID
+                        }
+                    })
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    this.x = Math.floor(Math.random() * 20)
-                    this.y = Math.floor(Math.random() * 20)
+                    this.x = Math.floor(Math.random() * Number(space?.width!))
+                    this.y = Math.floor(Math.random() * Number(space?.height!))
                     this.ws.send(JSON.stringify({
                         type: "space-joined",
                         payload: {
@@ -56,15 +57,14 @@ export class User {
                                 x: this.x,
                                 y: this.y
                             },
-                            users: RoomManager.getInstance().rooms.get(spaceID)?.map((u) => ({ id: u.id })) ?? []
+                            users: RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId })) ?? []
                         }
                     }))
-
                     RoomManager.getInstance().broadcast(
                         {
                             type: "user-joined",
                             payload: {
-                                userId: this.userId,
+                                id: this.userId,
                                 x: this.x,
                                 y: this.y
                             }
@@ -83,7 +83,7 @@ export class User {
                     const Xdisplacement = Math.abs(this.x - moveX)
                     const Ydisplacement = Math.abs(this.y - moveY)
 
-                    if ((Xdisplacement == 1 && Ydisplacement == 1) || (Xdisplacement == 0 && Ydisplacement == 1)) {
+                    if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
                         console.log("move is correct")
                         this.x = moveX
                         this.y = moveY
@@ -92,7 +92,8 @@ export class User {
                                 type: "move",
                                 payload: {
                                     x: this.x,
-                                    y: this.y
+                                    y: this.y,
+                                    id: this.userId
                                 }
                             },
                             this,
@@ -120,7 +121,7 @@ export class User {
             {
                 type: "user-left",
                 payload: {
-                    userId: this.userId,
+                    id: this.userId,
                 }
             },
             this,
