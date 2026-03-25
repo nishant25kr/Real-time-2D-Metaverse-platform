@@ -24,14 +24,9 @@ export class RoomManager {
     }
 
     public broadcast(message: OutgoingMessage, user: User, roomId: string) {
-        console.log("messgae:", message)
-        console.log("inside brodcase")
-        console.log("userid", user.id)
-
         if (!this.rooms.has(roomId)) {
             return;
         }
-
         this.rooms.get(roomId)?.forEach((x) => {
             if (x.id != user.id) {
                 if (x.ws.readyState === x.ws.OPEN) {

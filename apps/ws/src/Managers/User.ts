@@ -31,7 +31,6 @@ export class User {
         this.ws.on("message", async (data) => {
             const parsedData = JSON.parse(data.toString());
             switch (parsedData.type) {
-
                 case "join":
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
@@ -48,8 +47,9 @@ export class User {
                     })
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    this.x = Math.floor(Math.random() * Number(space?.width!))
-                    this.y = Math.floor(Math.random() * Number(space?.height!))
+                    this.x = Number(space?.width!)
+                    this.y = Number(space?.height!)
+                    const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
                     this.ws.send(JSON.stringify({
                         type: "space-joined",
                         payload: {
@@ -57,7 +57,8 @@ export class User {
                                 x: this.x,
                                 y: this.y
                             },
-                            users: RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId })) ?? []
+                            users: usersInroom,
+                            yourId: this.userId
                         }
                     }))
                     RoomManager.getInstance().broadcast(

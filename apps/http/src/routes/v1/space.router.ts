@@ -150,7 +150,7 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
 spaceRouter.get("/all", async (req, res) => {
     console.log("hello from all space")
     const spaces = await client.space.findMany()
-    console.log('spaces',spaces)
+    console.log('spaces', spaces)
     if (!spaces) {
         return res.status(400).json({
             message: "Spaces not available"
@@ -176,18 +176,18 @@ spaceRouter.post("/element", userMiddleware, async (req, res) => {
         })
     }
     const space = await client.space.findUnique({
-        where:{
+        where: {
             id: parsedData.data.spaceId
         }
     })
-    if(!space){
+    if (!space) {
         return res.status(400).json({
-            message:"Invalid space Id"
+            message: "Invalid space Id"
         })
     }
     const elementRes = await client.spaceElements.create({
         data: {
-            elementId : parsedData.data.elementId,
+            elementId: parsedData.data.elementId,
             spaceId: parsedData.data.spaceId,
             x: parsedData.data.x,
             y: parsedData.data.y

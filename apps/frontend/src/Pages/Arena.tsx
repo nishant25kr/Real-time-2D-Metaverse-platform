@@ -1,33 +1,23 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-// Configuration constants for easier adjustments
-const TILE_SIZE = 50;
-const AVATAR_RADIUS = 20;
+const CELL_SIZE = 10;
+
 
 export const Arena = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [users, setUsers] = useState<Map<string, any>>(new Map());
+  const canvasRef = useRef<any>(null);
+  const wsRef = useRef<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>({});
+  const [users, setUsers] = useState(new Map());
   const [params, setParams] = useState({ token: '', spaceId: '' });
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Update canvas size to match container
-  useEffect(() => {
-    const updateSize = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight
-        });
-      }
-    };
-    updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
-  }, []);
+  const rooms = [
+    { minX: 5, maxX: 20, minY: 5, maxY: 20  , name: "Room A" },
+    { minX: 12, maxX: 18, minY: 5, maxY: 10, name: "Room B" },
+    { minX: 5, maxX: 10, minY: 12, maxY: 18, name: "Room C" },
+    { minX: 12, maxX: 18, minY: 12, maxY: 18, name: "Room D" },
+    { minX: 20, maxX: 26, minY: 8, maxY: 14, name: "Room E" }
+  ];
+
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -38,7 +28,7 @@ export const Arena = () => {
     wsRef.current = new WebSocket('ws://localhost:8080/');
 
     wsRef.current.onopen = () => {
-      wsRef.current?.send(JSON.stringify({
+      wsRef.current.send(JSON.stringify({
         type: 'join',
         payload: {
           spaceId,
@@ -59,51 +49,55 @@ export const Arena = () => {
     };
   }, []);
 
-  const handleWebSocketMessage = useCallback((message: any) => {
+  const handleWebSocketMessage = (message: any) => {
     switch (message.type) {
       case 'space-joined':
+        console.log("space-joined from backend", message)
         setCurrentUser({
           x: message.payload.spawn.x,
           y: message.payload.spawn.y,
-          id: message.payload.id || 'me' // fallback if not provided
+          userId: message.payload.yourId
         });
 
-        // Initialize other users
-        const userMap = new Map();
-        message.payload.users.forEach((user: any) => {
-          userMap.set(user.id, user);
-        });
-        setUsers(userMap);
+        if (message.payload.users.length > 0) {
+
+          const userMap = new Map();
+          message.payload.users.forEach((user: any) => {
+            userMap.set(user.id, user);
+          });
+          setUsers(userMap);
+        }
         break;
 
       case 'user-joined':
         setUsers(prev => {
           const newUsers = new Map(prev);
+
           newUsers.set(message.payload.id, {
             x: message.payload.x,
             y: message.payload.y,
-            id: message.payload.id
+            userId: message.payload.id
           });
+
           return newUsers;
         });
         break;
 
-      case 'move': // Changed from 'movement'
+      case 'move':
         setUsers(prev => {
           const newUsers = new Map(prev);
-          const user = newUsers.get(message.payload.id);
+          const user = newUsers.get(message.payload.userId);
           if (user) {
-            newUsers.set(message.payload.id, {
-              ...user,
-              x: message.payload.x,
-              y: message.payload.y
-            });
+            user.x = message.payload.x;
+            user.y = message.payload.y;
+            newUsers.set(message.payload.userId, user);
           }
           return newUsers;
         });
         break;
 
       case 'movement-rejected':
+        // Reset current user position if movement was rejected
         setCurrentUser((prev: any) => ({
           ...prev,
           x: message.payload.x,
@@ -114,182 +108,149 @@ export const Arena = () => {
       case 'user-left':
         setUsers(prev => {
           const newUsers = new Map(prev);
-          newUsers.delete(message.payload.id);
+          newUsers.delete(message.payload.userId);
           return newUsers;
         });
         break;
     }
-  }, []);
+  };
 
-  const handleMove = useCallback((newX: number, newY: number) => {
-    if (!currentUser || !wsRef.current) return;
+  const handleMove = (newX: any, newY: any) => {
+    if (!currentUser) return;
 
-    // Optimistic UI update
-    setCurrentUser((prev: any) => ({ ...prev, x: newX, y: newY }));
-
-    // Send movement request
     wsRef.current.send(JSON.stringify({
       type: 'move',
       payload: {
         x: newX,
-        y: newY
+        y: newY,
+        userId: currentUser.userId
       }
     }));
-  }, [currentUser]);
+  };
 
-  // Main Draw Loop
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !dimensions.width) return;
+    if (!canvas) return;
+    const offsetX = currentUser.x * CELL_SIZE - canvas.width / 2;
+    const offsetY = currentUser.y * CELL_SIZE - canvas.height / 2;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    console.log("width", canvas.width)
+    console.log("height", canvas.height)
 
-    // Camera following current player
-    const cameraX = currentUser ? (currentUser.x * TILE_SIZE) - (dimensions.width / 2) : 0;
-    const cameraY = currentUser ? (currentUser.y * TILE_SIZE) - (dimensions.height / 2) : 0;
-
-    ctx.save();
-    ctx.translate(-cameraX, -cameraY);
-
-    // Draw grid background
-    const gridStartCol = Math.floor(cameraX / TILE_SIZE) - 2;
-    const gridEndCol = gridStartCol + Math.ceil(dimensions.width / TILE_SIZE) + 4;
-    const gridStartRow = Math.floor(cameraY / TILE_SIZE) - 2;
-    const gridEndRow = gridStartRow + Math.ceil(dimensions.height / TILE_SIZE) + 4;
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 1;
-    
-    for (let i = gridStartCol; i <= gridEndCol; i++) {
+    ctx.strokeStyle = '#eee';
+    for (let i = 0; i < canvas.width; i += 10) {
       ctx.beginPath();
-      ctx.moveTo(i * TILE_SIZE, gridStartRow * TILE_SIZE);
-      ctx.lineTo(i * TILE_SIZE, gridEndRow * TILE_SIZE);
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, canvas.height);
       ctx.stroke();
     }
-    for (let j = gridStartRow; j <= gridEndRow; j++) {
+    for (let i = 0; i < canvas.height; i += 10) {
       ctx.beginPath();
-      ctx.moveTo(gridStartCol * TILE_SIZE, j * TILE_SIZE);
-      ctx.lineTo(gridEndCol * TILE_SIZE, j * TILE_SIZE);
+      ctx.moveTo(0, i);
+      ctx.lineTo(canvas.width, i);
       ctx.stroke();
     }
 
-    // Draw other users
-    users.forEach(user => {
-      // Body
-      ctx.beginPath();
-      ctx.fillStyle = '#14B8A6'; // Teal color
-      ctx.arc(user.x * TILE_SIZE, user.y * TILE_SIZE, AVATAR_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'white';
+    rooms.forEach(room => {
+      const startX = room.minX * CELL_SIZE - offsetX;
+      const startY = room.minY * CELL_SIZE - offsetY;
+      const width = (room.maxX - room.minX) * CELL_SIZE;
+      const height = (room.maxY - room.minY) * CELL_SIZE;
+      console.log(startX,startY,width,height)
+
+      ctx.fillStyle = "rgba(0, 150, 255, 0.1)";
+      ctx.fillRect(startX, startY, width, height);
+
+      ctx.strokeStyle = "#0096FF";
       ctx.lineWidth = 2;
-      ctx.stroke();
+      ctx.strokeRect(startX, startY, width, height);
 
-      // Shadow
-      ctx.beginPath();
-      ctx.ellipse(user.x * TILE_SIZE, user.y * TILE_SIZE + 22, 15, 5, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fill();
+      ctx.fillStyle = "#000";
+      ctx.font = "14px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        room.name,
+        startX + width / 2,
+        startY + height / 2
+      );
 
-      // Label
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.font = 'bold 12px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      const label = user.id.length > 8 ? user.id.substring(0, 5) + '...' : user.id;
-      ctx.fillText(label, user.x * TILE_SIZE, user.y * TILE_SIZE - 30);
     });
 
-    // Draw current user (Player)
-    if (currentUser) {
-      // Glow/Pulse effect would be nice, but simple for now
+    if (currentUser && currentUser.x) {
       ctx.beginPath();
-      ctx.fillStyle = '#6366F1'; // Indigo color
-      ctx.arc(currentUser.x * TILE_SIZE, currentUser.y * TILE_SIZE, AVATAR_RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = '#FF6B6B';
+      ctx.arc(currentUser.x * 15, currentUser.y * 15, 10, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#A5B4FC';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Simple "Face" indicator (look at last direction?)
-      ctx.fillStyle = 'white';
-      ctx.beginPath();
-      ctx.arc(currentUser.x * TILE_SIZE - 6, currentUser.y * TILE_SIZE - 4, 3, 0, Math.PI * 2);
-      ctx.arc(currentUser.x * TILE_SIZE + 6, currentUser.y * TILE_SIZE - 4, 3, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Label
-      ctx.fillStyle = 'white';
-      ctx.font = 'bold 14px Inter, sans-serif';
+      ctx.fillStyle = '#000';
+      ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('YOU', currentUser.x * TILE_SIZE, currentUser.y * TILE_SIZE - 35);
+      ctx.fillText(`${currentUser.x}-${currentUser.y}`, currentUser.x * 15, currentUser.y * 15 + 40);
     }
 
-    ctx.restore();
-  }, [currentUser, users, dimensions]);
+    users.forEach(user => {
+      if (!user.x) {
+        return
+      }
+      ctx.beginPath();
+      ctx.fillStyle = '#4ECDC4';
+      ctx.arc(user.x * 25, user.y * 25, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText(`User ${user.x, user.y}`, user.x * 25, user.y * 25 + 40);
+    });
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  }, [currentUser, users]);
+
+  const handleKeyDown = (e: any) => {
+
     if (!currentUser) return;
-
     const { x, y } = currentUser;
+    console.log("x", x)
+
+    console.log("x", y)
     switch (e.key) {
       case 'ArrowUp':
-      case 'w':
-      case 'W':
+        console.log("x", x)
+        console.log("Y", y)
         handleMove(x, y - 1);
         break;
+
       case 'ArrowDown':
-      case 's':
-      case 'S':
         handleMove(x, y + 1);
         break;
+
       case 'ArrowLeft':
-      case 'a':
-      case 'A':
         handleMove(x - 1, y);
         break;
+
       case 'ArrowRight':
-      case 'd':
-      case 'D':
         handleMove(x + 1, y);
         break;
     }
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className="relative w-full h-screen bg-[#0F172A] overflow-hidden focus:outline-none"
-      onKeyDown={handleKeyDown} 
-      tabIndex={0}
-    >
-      <div className="absolute top-6 left-6 z-10 pointer-events-none">
-        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-xl shadow-2xl">
-          <h1 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            MetaVerse Arena
-          </h1>
-          <div className="space-y-1">
-            <p className="text-xs text-slate-400 font-mono">Space: <span className="text-slate-200">{params.spaceId.substring(0, 12)}...</span></p>
-            <p className="text-xs text-slate-400">Players: <span className="text-slate-200 font-bold">{users.size + (currentUser ? 1 : 0)}</span>在线</p>
-          </div>
-        </div>
+    <div className="p-4" onKeyDown={handleKeyDown} tabIndex={0}>
+
+      <h1 className="text-2xl font-bold mb-4">Arena</h1>
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">Token: {params.token}</p>
+        <p className="text-sm text-gray-600">Space ID: {params.spaceId}</p>
+        <p className="text-sm text-gray-600">Connected Users: {users.size + (currentUser ? 1 : 0)}</p>
       </div>
-
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-black/40 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10">
-        <p className="text-xs text-slate-300 font-medium tracking-wide">
-          WASD or Arrow Keys to Move
-        </p>
+      <div className="border rounded-lg p-2">
+        <canvas
+          ref={canvasRef}
+          width={1000}
+          height={600}
+          className="bg-white border "
+        />
       </div>
-
-      <canvas
-        ref={canvasRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        className="block"
-      />
-
+      <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
     </div>
   );
 };
