@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
-const CELL_SIZE = 10;
-
+const CELL_SIZE = 20;
 
 export const Arena = () => {
   const canvasRef = useRef<any>(null);
@@ -11,13 +10,12 @@ export const Arena = () => {
   const [params, setParams] = useState({ token: '', spaceId: '' });
 
   const rooms = [
-    { minX: 5, maxX: 20, minY: 5, maxY: 20  , name: "Room A" },
+    { minX: 5, maxX: 10, minY: 5, maxY: 10, name: "Room A" },
     { minX: 12, maxX: 18, minY: 5, maxY: 10, name: "Room B" },
     { minX: 5, maxX: 10, minY: 12, maxY: 18, name: "Room C" },
     { minX: 12, maxX: 18, minY: 12, maxY: 18, name: "Room D" },
     { minX: 20, maxX: 26, minY: 8, maxY: 14, name: "Room E" }
   ];
-
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -72,27 +70,25 @@ export const Arena = () => {
       case 'user-joined':
         setUsers(prev => {
           const newUsers = new Map(prev);
-
           newUsers.set(message.payload.id, {
             x: message.payload.x,
             y: message.payload.y,
             userId: message.payload.id
           });
-
           return newUsers;
         });
         break;
 
       case 'move':
-        setUsers(prev => {
-          const newUsers = new Map(prev);
-          const user = newUsers.get(message.payload.userId);
+        setUsers(prev => {  
+          const users = new Map(prev);
+          const user = users.get(message.payload.id);
           if (user) {
             user.x = message.payload.x;
             user.y = message.payload.y;
-            newUsers.set(message.payload.userId, user);
+            users.set(message.payload.userId, user);
           }
-          return newUsers;
+          return users;
         });
         break;
 
@@ -108,7 +104,7 @@ export const Arena = () => {
       case 'user-left':
         setUsers(prev => {
           const newUsers = new Map(prev);
-          newUsers.delete(message.payload.userId);
+          newUsers.delete(message.payload.id);
           return newUsers;
         });
         break;
@@ -135,18 +131,35 @@ export const Arena = () => {
     const offsetY = currentUser.y * CELL_SIZE - canvas.height / 2;
 
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    console.log("width", canvas.width)
-    console.log("height", canvas.height)
+    // ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.strokeStyle = '#eee';
-    for (let i = 0; i < canvas.width; i += 10) {
+//     ctx.strokeStyle = '#eee';
+//     const scale = window.devicePixelRatio;
+
+// canvas.width = window.innerWidth * scale;
+// canvas.height = window.innerHeight * scale;
+
+// canvas.style.width = `${window.innerWidth}px`;
+// canvas.style.height = `${window.innerHeight}px`;
+
+// ctx.scale(scale, scale);
+
+    const resizeCanvas = () => {
+    canvas.width = window.innerWidth - 100;
+    canvas.height = window.innerHeight - 100;
+    }
+    console.log(canvas.width)
+    console.log(canvas.height)
+    resizeCanvas()
+
+    for (let i = 0; i < canvas.width; i += CELL_SIZE) {
       ctx.beginPath();
       ctx.moveTo(i, 0);
       ctx.lineTo(i, canvas.height);
+      ctx.fillStyle = '#000';
       ctx.stroke();
     }
-    for (let i = 0; i < canvas.height; i += 10) {
+    for (let i = 0; i < canvas.height; i += CELL_SIZE) {
       ctx.beginPath();
       ctx.moveTo(0, i);
       ctx.lineTo(canvas.width, i);
@@ -158,7 +171,6 @@ export const Arena = () => {
       const startY = room.minY * CELL_SIZE - offsetY;
       const width = (room.maxX - room.minX) * CELL_SIZE;
       const height = (room.maxY - room.minY) * CELL_SIZE;
-      console.log(startX,startY,width,height)
 
       ctx.fillStyle = "rgba(0, 150, 255, 0.1)";
       ctx.fillRect(startX, startY, width, height);
@@ -194,13 +206,13 @@ export const Arena = () => {
         return
       }
       ctx.beginPath();
-      ctx.fillStyle = '#4ECDC4';
-      ctx.arc(user.x * 25, user.y * 25, 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffe1e1';
+      ctx.arc(user.x * 15, user.y * 15, 10, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#000';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`User ${user.x, user.y}`, user.x * 25, user.y * 25 + 40);
+      ctx.fillText(`${user.x}-${user.y}`, user.x * 15, user.y * 15 + 40);
     });
 
   }, [currentUser, users]);
@@ -209,40 +221,49 @@ export const Arena = () => {
 
     if (!currentUser) return;
     const { x, y } = currentUser;
-    console.log("x", x)
-
-    console.log("x", y)
     switch (e.key) {
       case 'ArrowUp':
-        console.log("x", x)
-        console.log("Y", y)
+        console.log("inside case")
+        currentUser.y = y - 1
+        setCurrentUser({
+          ...currentUser,
+          y: y - 1
+        });
         handleMove(x, y - 1);
         break;
 
       case 'ArrowDown':
+        setCurrentUser({
+          ...currentUser,
+          y: y + 1
+        });
         handleMove(x, y + 1);
         break;
 
       case 'ArrowLeft':
+        setCurrentUser({
+          ...currentUser,
+          x: x - 1
+        });
         handleMove(x - 1, y);
         break;
 
       case 'ArrowRight':
+        setCurrentUser({
+          ...currentUser,
+          x: x + 1
+        });
         handleMove(x + 1, y);
         break;
     }
   };
 
   return (
-    <div className="p-4" onKeyDown={handleKeyDown} tabIndex={0}>
-
-      <h1 className="text-2xl font-bold mb-4">Arena</h1>
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">Token: {params.token}</p>
-        <p className="text-sm text-gray-600">Space ID: {params.spaceId}</p>
-        <p className="text-sm text-gray-600">Connected Users: {users.size + (currentUser ? 1 : 0)}</p>
-      </div>
-      <div className="border rounded-lg p-2">
+    <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
+      <h1>user:{users.size}</h1>
+      <h1>Token:{JSON.stringify(params.token)}</h1>
+      <h1>spaceID:{JSON.stringify(params.spaceId)}</h1>
+      <div className="border overflow-scrollrounded-lg">
         <canvas
           ref={canvasRef}
           width={1000}
