@@ -3,11 +3,18 @@ import { useEffect, useRef, useState } from 'react';
 const CELL_SIZE = 20;
 
 export const Arena = () => {
+  
+  interface chairCordinates{
+    x:number,
+    y: number
+  }
+
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({});
   const [users, setUsers] = useState(new Map());
   const [params, setParams] = useState({ token: '', spaceId: '' });
+  const [chairCordinates, setChairCordinates] = useState<object[]>([])
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -28,7 +35,7 @@ export const Arena = () => {
     width: number;
     height: number;
     label?: string;
-    chairs: { dx: number; dy: number; rotate: number }[];
+    chairs: { dx: number; dy: number; chairId: number; rotate: number }[];
   }
 
   const furniture: Furniture[] = [
@@ -36,28 +43,27 @@ export const Arena = () => {
       id: 'table-a1', type: 'rect-table', x: 3, y: 4, width: 14, height: 6,
       label: 'Meeting',
       chairs: [
-        // Top row  (dy = -1  →  just above the table top edge)
-        { dx: 1,  dy: -1, rotate: 0 },
-        { dx: 3,  dy: -1, rotate: 0 },
-        { dx: 5,  dy: -1, rotate: 0 },
-        { dx: 7,  dy: -1, rotate: 0 },
-        { dx: 9,  dy: -1, rotate: 0 },
-        { dx: 11, dy: -1, rotate: 0 },
-        // Bottom row  (dy = height  →  just below the table bottom edge)
-        { dx: 1,  dy: 6, rotate: 180 },
-        { dx: 3,  dy: 6, rotate: 180 },
-        { dx: 5,  dy: 6, rotate: 180 },
-        { dx: 7,  dy: 6, rotate: 180 },
-        { dx: 9,  dy: 6, rotate: 180 },
-        { dx: 11, dy: 6, rotate: 180 },
-        // Left side  (dx = -1  →  just left of the table left edge)
-        { dx: -1, dy: 1, rotate: 90 },
-        { dx: -1, dy: 3, rotate: 90 },
-        { dx: -1, dy: 5, rotate: 90 },
-        // Right side  (dx = width  →  just right of the table right edge)
-        { dx: 14, dy: 1, rotate: 270 },
-        { dx: 14, dy: 3, rotate: 270 },
-        { dx: 14, dy: 5, rotate: 270 },
+        { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+        // { dx: 3,  dy: -1, rotate: 0, chairId:2 },
+        { dx: 5, dy: -1, rotate: 0, chairId: 2 },
+        // { dx: 7,  dy: -1, rotate: 0 },
+        { dx: 9,  dy: -1, rotate: 0,chairId: 3 },
+        // { dx: 11, dy: -1, rotate: 0 },
+
+        { dx: 1,  dy: 6, rotate: 180, chairId: 4 },
+        // { dx: 3,  dy: 6, rotate: 180 },
+        { dx: 5,  dy: 6, rotate: 180, chairId: 5 },
+        // { dx: 7,  dy: 6, rotate: 180 },
+        // { dx: 9,  dy: 6, rotate: 180 },
+        // { dx: 11, dy: 6, rotate: 180 },
+
+        // { dx: -1, dy: 1, rotate: 90 },
+        // { dx: -1, dy: 3, rotate: 90 },
+        // { dx: -1, dy: 5, rotate: 90 },
+
+        // { dx: 14, dy: 1, rotate: 270 },
+        // { dx: 14, dy: 3, rotate: 270 },
+        // { dx: 14, dy: 5, rotate: 270 },
       ]
     }
   ];
@@ -68,6 +74,11 @@ export const Arena = () => {
     } else {
       console.log("not in room")
     }
+    chairCordinates.forEach((e)=>{
+      if(e.x == x && e.y === y){
+        console.log("near chair")
+      }
+    })
   }
 
   useEffect(() => {
@@ -209,12 +220,13 @@ export const Arena = () => {
     }
 
     const drawChair = (ctx: CanvasRenderingContext2D, px: number, py: number) => {
-      const w = CELL_SIZE ;
-      const h = CELL_SIZE ;
+      const w = CELL_SIZE;
+      const h = CELL_SIZE;
       ctx.fillStyle = '#94a3b8';
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 1;
       ctx.beginPath();
+
       ctx.roundRect(px - w / 2, py - h / 2, w, h, 4);
       ctx.fill();
       ctx.stroke();
@@ -227,9 +239,21 @@ export const Arena = () => {
       const ph = item.height * CELL_SIZE;
 
       item.chairs.forEach(chair => {
+
         const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
+
+        setChairCordinates((prev) => {
+          const newX = Math.floor(cx / CELL_SIZE);
+          const newY = Math.floor(cy / CELL_SIZE);
+
+          const exists = prev.some((c: any) => c.x === newX && c.y === newY);
+          if (exists) return prev;
+
+          return [...prev, { x: newX, y: newY }];
+        });
         drawChair(ctx, cx, cy);
+
       });
 
       ctx.fillStyle = item.type === 'solo-desk' ? '#6366f1' : '#d97706';
@@ -244,7 +268,7 @@ export const Arena = () => {
       } else {
         ctx.beginPath();
         ctx.roundRect(px, py, pw, ph, 6);
-        // ctx.fill();
+        ctx.fill();
         ctx.stroke();
       }
 
@@ -350,6 +374,7 @@ export const Arena = () => {
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
+      <h1>{JSON.stringify(chairCordinates)}</h1>
       <h1>user:{users.size}</h1>
       <h1>Token:{JSON.stringify(params.token)}</h1>
       <h1>spaceID:{JSON.stringify(params.spaceId)}</h1>
