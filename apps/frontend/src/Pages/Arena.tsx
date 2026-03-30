@@ -16,6 +16,8 @@ export const Arena = () => {
   const [params, setParams] = useState({ token: '', spaceId: '' });
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
+
+
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
     { minX: 21, maxX: 41, minY: 1, maxY: 20, name: "Room B" },
@@ -70,9 +72,9 @@ export const Arena = () => {
 
   function isinRoom(x: any, y: any) {
     if (x > 1 && x < 20 && y > 1 && y < 20) {
-      console.log("you are in meeting room ")
+
     } else {
-      console.log("not in room")
+
     }
     chairCordinates.forEach((e: any) => {
       const validCordinates = [
@@ -85,9 +87,9 @@ export const Arena = () => {
       ]
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
-          console.log("near chair", e.chairId)
+
           setPossibleChairToSit(e.chairId)
-          console.log("possible chair", possibleChairToSit)
+
         } else {
           if (possibleChairToSit != 0) {
             setPossibleChairToSit(0)
@@ -139,7 +141,6 @@ export const Arena = () => {
         });
 
         if (message.payload.users.length > 0) {
-
           const userMap = new Map();
           message.payload.users.forEach((user: any) => {
             userMap.set(user.id, user);
@@ -174,7 +175,6 @@ export const Arena = () => {
         break;
 
       case 'movement-rejected':
-        // Reset current user position if movement was rejected
         setCurrentUser((prev: any) => ({
           ...prev,
           x: message.payload.x,
@@ -195,7 +195,6 @@ export const Arena = () => {
   const handleMove = (newX: any, newY: any) => {
     if (!currentUser) return;
     isinRoom(newX, newY)
-
     wsRef.current.send(JSON.stringify({
       type: 'move',
       payload: {
@@ -209,8 +208,6 @@ export const Arena = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    // const offsetX = currentUser.x * CELL_SIZE - canvas.width / 2;
-    // const offsetY = currentUser.y * CELL_SIZE - canvas.height / 2;
 
     const ctx = canvas.getContext('2d')
 
@@ -218,6 +215,7 @@ export const Arena = () => {
       canvas.width = window.innerWidth - 50;
       canvas.height = window.innerHeight - 100;
     }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     resizeCanvas()
 
@@ -243,8 +241,7 @@ export const Arena = () => {
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 1;
       ctx.beginPath();
-
-      ctx.roundRect(px - w / 2, py - h / 2, w, h, 4);
+      ctx.roundRect(px , py , w, h, 4);
       ctx.fill();
       ctx.stroke();
     };
@@ -256,22 +253,20 @@ export const Arena = () => {
       const ph = item.height * CELL_SIZE;
 
       item.chairs.forEach(chair => {
-
         const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
-        const id = chair.chairId
 
+        const id = chair.chairId
         setChairCordinates((prev) => {
           const newX = Math.floor(cx / CELL_SIZE);
           const newY = Math.floor(cy / CELL_SIZE);
-
+          
           const exists = prev.some((c: any) => c.x === newX && c.y === newY);
           if (exists) return prev;
 
           return [...prev, { x: newX, y: newY, chairId: id }];
         });
         drawChair(ctx, cx, cy);
-
       });
 
       ctx.fillStyle = item.type === 'solo-desk' ? '#6366f1' : '#d97706';
@@ -285,7 +280,7 @@ export const Arena = () => {
         ctx.stroke();
       } else {
         ctx.beginPath();
-        ctx.roundRect(px, py, pw, ph, 6);
+        ctx.roundRect(px , py , pw, ph, 6);
         ctx.fill();
         ctx.stroke();
       }
@@ -298,7 +293,6 @@ export const Arena = () => {
       }
     };
 
-    // Inside your render useEffect, after drawing rooms:
     furniture.forEach(item => drawTable(ctx, item));
 
     rooms.forEach((room) => {
@@ -352,17 +346,36 @@ export const Arena = () => {
 
     if (!currentUser) return;
     const { x, y } = currentUser;
+    
+    if(e.metaKey && e.key.toLowerCase() === "i"){
+      if(possibleChairToSit){
+
+        furniture[0].chairs.forEach((e)=>{
+          if(e.chairId === possibleChairToSit){
+            const px = 3 * CELL_SIZE;
+            const py = 4 * CELL_SIZE;
+            const cx = px + e.dx * CELL_SIZE + CELL_SIZE / 2;
+            const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
+            const x = cx / CELL_SIZE;
+            const y = cy / CELL_SIZE;
+            setCurrentUser({x , y})
+            handleMove(x,y) 
+          }
+        })
+      }else{
+
+      }
+    }
+
     switch (e.key) {
       case 'ArrowUp':
-
         currentUser.y = y - 1
-
         setCurrentUser({
           ...currentUser,
           y: y - 1
         });
-        handleMove(x, y - 1);
-        break;
+      handleMove(x, y - 1);
+      break;
 
       case 'ArrowDown':
         setCurrentUser({
@@ -379,7 +392,7 @@ export const Arena = () => {
         });
         handleMove(x - 1, y);
         break;
-
+ 
       case 'ArrowRight':
         setCurrentUser({
           ...currentUser,
@@ -388,11 +401,11 @@ export const Arena = () => {
         handleMove(x + 1, y);
         break;
 
-      case e.metaKey && e.key.toLowerCase() === "i":
-        console.log("hello")
-        break
+      
     }
+
   };
+
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
