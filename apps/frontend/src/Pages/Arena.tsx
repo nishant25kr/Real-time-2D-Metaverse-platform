@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 const CELL_SIZE = 20;
 
 export const Arena = () => {
-  
-  interface chairCordinates{
-    x:number,
+
+  interface chairCordinates {
+    x: number,
     y: number
   }
 
@@ -15,7 +15,7 @@ export const Arena = () => {
   const [users, setUsers] = useState(new Map());
   const [params, setParams] = useState({ token: '', spaceId: '' });
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
-
+  const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
     { minX: 21, maxX: 41, minY: 1, maxY: 20, name: "Room B" },
@@ -47,12 +47,12 @@ export const Arena = () => {
         // { dx: 3,  dy: -1, rotate: 0, chairId:2 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
         // { dx: 7,  dy: -1, rotate: 0 },
-        { dx: 9,  dy: -1, rotate: 0,chairId: 3 },
+        { dx: 9, dy: -1, rotate: 0, chairId: 3 },
         // { dx: 11, dy: -1, rotate: 0 },
 
-        { dx: 1,  dy: 6, rotate: 180, chairId: 4 },
+        { dx: 1, dy: 6, rotate: 180, chairId: 4 },
         // { dx: 3,  dy: 6, rotate: 180 },
-        { dx: 5,  dy: 6, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 6, rotate: 180, chairId: 5 },
         // { dx: 7,  dy: 6, rotate: 180 },
         // { dx: 9,  dy: 6, rotate: 180 },
         // { dx: 11, dy: 6, rotate: 180 },
@@ -74,10 +74,27 @@ export const Arena = () => {
     } else {
       console.log("not in room")
     }
-    chairCordinates.forEach((e)=>{
-      if(e.x == x && e.y === y){
-        console.log("near chair")
-      }
+    chairCordinates.forEach((e: any) => {
+      const validCordinates = [
+        { x: e.x, y: e.y },
+        { x: e.x - 1, y: e.y },
+        { x: e.x, y: e.y - 1 },
+        { x: e.x + 1, y: e.y + 1 },
+        { x: e.x + 2, y: e.y },
+        { x: e.x + 1, y: e.y }
+      ]
+      validCordinates.forEach((c) => {
+        if (c.x == x && c.y == y) {
+          console.log("near chair", e.chairId)
+          setPossibleChairToSit(e.chairId)
+          console.log("possible chair", possibleChairToSit)
+        } else {
+          if (possibleChairToSit != 0) {
+            setPossibleChairToSit(0)
+          }
+        }
+      })
+
     })
   }
 
@@ -242,6 +259,7 @@ export const Arena = () => {
 
         const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
+        const id = chair.chairId
 
         setChairCordinates((prev) => {
           const newX = Math.floor(cx / CELL_SIZE);
@@ -250,7 +268,7 @@ export const Arena = () => {
           const exists = prev.some((c: any) => c.x === newX && c.y === newY);
           if (exists) return prev;
 
-          return [...prev, { x: newX, y: newY }];
+          return [...prev, { x: newX, y: newY, chairId: id }];
         });
         drawChair(ctx, cx, cy);
 
@@ -369,11 +387,16 @@ export const Arena = () => {
         });
         handleMove(x + 1, y);
         break;
+
+      case e.metaKey && e.key.toLowerCase() === "i":
+        console.log("hello")
+        break
     }
   };
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
+      <h1>possible chair{possibleChairToSit}</h1>
       <h1>{JSON.stringify(chairCordinates)}</h1>
       <h1>user:{users.size}</h1>
       <h1>Token:{JSON.stringify(params.token)}</h1>
