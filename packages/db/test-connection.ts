@@ -1,22 +1,18 @@
 import { PrismaClient } from "./generated/prisma/index.js";
-import { PrismaPg } from "@prisma/adapter-pg";
 import "dotenv/config";
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
-
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient({});
 
 async function main() {
   try {
-    console.log("Connecting to:", process.env.DATABASE_URL?.split("@")[1]); // Log host only for safety
-    await prisma.$connect();
-    console.log("✅ Successfully connected to the Cloud database!");
+    console.log("Connecting with native Prisma engine to:", process.env.DATABASE_URL?.split("@")[1]);
     
-    // Try to count users as a test
+    await prisma.$connect();
+    console.log("✅ Prisma connected!");
+    
+    console.log("Testing Prisma query...");
     const userCount = await prisma.user.count();
-    console.log(`📊 There are currently ${userCount} users in the database.`);
+    console.log(`📊 Currently ${userCount} users in database.`);
     
   } catch (error) {
     console.error("❌ Connection failed:");

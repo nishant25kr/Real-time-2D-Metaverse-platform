@@ -131,9 +131,10 @@ export const Arena = () => {
   }, []);
 
   const handleWebSocketMessage = (message: any) => {
+    console.log("WebSocket message received:", message.type, message.payload);
     switch (message.type) {
       case 'space-joined':
-
+        console.log("Joined space successfully:", message.payload);
         setCurrentUser({
           x: message.payload.spawn.x,
           y: message.payload.spawn.y,
@@ -345,7 +346,7 @@ export const Arena = () => {
   const handleKeyDown = (e: any) => {
 
     if (!currentUser) return;
-    const { x, y } = currentUser;
+
     
     if(e.metaKey && e.key.toLowerCase() === "i"){
       if(possibleChairToSit){
@@ -369,39 +370,40 @@ export const Arena = () => {
 
     switch (e.key) {
       case 'ArrowUp':
-        currentUser.y = y - 1
-        setCurrentUser({
-          ...currentUser,
-          y: y - 1
+        setCurrentUser((prev: any) => {
+          if (!prev || prev.x === undefined) return prev;
+          const newY = prev.y - 1;
+          handleMove(prev.x, newY);
+          return { ...prev, y: newY };
         });
-      handleMove(x, y - 1);
-      break;
+        break;
 
       case 'ArrowDown':
-        setCurrentUser({
-          ...currentUser,
-          y: y + 1
+        setCurrentUser((prev: any) => {
+          if (!prev || prev.x === undefined) return prev;
+          const newY = prev.y + 1;
+          handleMove(prev.x, newY);
+          return { ...prev, y: newY };
         });
-        handleMove(x, y + 1);
         break;
 
       case 'ArrowLeft':
-        setCurrentUser({
-          ...currentUser,
-          x: x - 1
+        setCurrentUser((prev: any) => {
+          if (!prev || prev.x === undefined) return prev;
+          const newX = prev.x - 1;
+          handleMove(newX, prev.y);
+          return { ...prev, x: newX };
         });
-        handleMove(x - 1, y);
-        break;
- 
-      case 'ArrowRight':
-        setCurrentUser({
-          ...currentUser,
-          x: x + 1
-        });
-        handleMove(x + 1, y);
         break;
 
-      
+      case 'ArrowRight':
+        setCurrentUser((prev: any) => {
+          if (!prev || prev.x === undefined) return prev;
+          const newX = prev.x + 1;
+          handleMove(newX, prev.y);
+          return { ...prev, x: newX };
+        });
+        break;
     }
 
   };

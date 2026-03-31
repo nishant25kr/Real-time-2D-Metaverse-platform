@@ -45,10 +45,15 @@ export class User {
                             id: spaceID
                         }
                     })
+                    if (!space) {
+                        this.ws.close();
+                        return;
+                    }
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
                     this.x = Number(space?.width!)
                     this.y = Number(space?.height!)
+                    console.log("INITIAL POSITION SET TO:", this.x, this.y, "from width/height:", space.width, space.height);
                     const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
                     this.ws.send(JSON.stringify({
                         type: "space-joined",
@@ -76,16 +81,18 @@ export class User {
                     break;
 
                 case "move":
-                    console.log("parsedData", parsedData)
+                    console.log("Current pos:", this.x, this.y);
+                    console.log("parsedData", parsedData);
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
-                    const Xdisplacement = Math.abs(this.x - moveX)
-                    const Ydisplacement = Math.abs(this.y - moveY)
+                    const Xdisplacement = Math.abs(this.x - moveX);
+                    const Ydisplacement = Math.abs(this.y - moveY);
+                    console.log("Displacement:", Xdisplacement, Ydisplacement);
 
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
-                        console.log("move is correct")
-                        this.x = moveX
-                        this.y = moveY
+                        console.log("move is correct");
+                        this.x = moveX;
+                        this.y = moveY;
                         RoomManager.getInstance().broadcast(
                             {
                                 type: "move",
@@ -97,11 +104,11 @@ export class User {
                             },
                             this,
                             this.spaceId!
-                        )
-                        return
+                        );
+                        return;
                     }
                     else {
-                        console.log("move is not correct")
+                        console.log("move is not correct");
                         this.ws.send(JSON.stringify({
                             type: "movement-rejected",
                             payload: {
@@ -110,9 +117,9 @@ export class User {
                             }
                         }));
                     }
-
+                    break;
             }
-        })
+        });
     }
 
     destroy() {
