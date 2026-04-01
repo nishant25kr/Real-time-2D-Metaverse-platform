@@ -16,6 +16,7 @@ export const Arena = () => {
   const [params, setParams] = useState({ token: '', spaceId: '' });
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
+  const [message, setMessage] = useState<string>()
 
 
   const rooms = [
@@ -25,6 +26,10 @@ export const Arena = () => {
     { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
+
+  function popUp(message: string, type: string) {
+    return message
+  }
 
 
   type FurnitureType = 'rect-table' | 'round-table' | 'solo-desk';
@@ -72,7 +77,7 @@ export const Arena = () => {
 
   function isinRoom(x: any, y: any) {
     if (x > 1 && x < 20 && y > 1 && y < 20) {
-
+      console.log("inside the room")
     } else {
 
     }
@@ -87,7 +92,9 @@ export const Arena = () => {
       ]
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
-
+          console.log("near chair", e.chairId)
+          //write popup message
+          setMessage(popUp(`click cmd+I to sit in chair`,"hello"))
           setPossibleChairToSit(e.chairId)
 
         } else {
@@ -131,10 +138,9 @@ export const Arena = () => {
   }, []);
 
   const handleWebSocketMessage = (message: any) => {
-    console.log("WebSocket message received:", message.type, message.payload);
     switch (message.type) {
       case 'space-joined':
-        console.log("Joined space successfully:", message.payload);
+
         setCurrentUser({
           x: message.payload.spawn.x,
           y: message.payload.spawn.y,
@@ -144,7 +150,7 @@ export const Arena = () => {
         if (message.payload.users.length > 0) {
           const userMap = new Map();
           message.payload.users.forEach((user: any) => {
-            userMap.set(user.id, user);
+            userMap.set(user.id, user); 
           });
           setUsers(userMap);
         }
@@ -242,7 +248,7 @@ export const Arena = () => {
       ctx.strokeStyle = '#64748b';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(px , py , w, h, 4);
+      ctx.roundRect(px, py, w, h, 4);
       ctx.fill();
       ctx.stroke();
     };
@@ -261,7 +267,7 @@ export const Arena = () => {
         setChairCordinates((prev) => {
           const newX = Math.floor(cx / CELL_SIZE);
           const newY = Math.floor(cy / CELL_SIZE);
-          
+
           const exists = prev.some((c: any) => c.x === newX && c.y === newY);
           if (exists) return prev;
 
@@ -281,7 +287,7 @@ export const Arena = () => {
         ctx.stroke();
       } else {
         ctx.beginPath();
-        ctx.roundRect(px , py , pw, ph, 6);
+        ctx.roundRect(px + CELL_SIZE / 2, py + CELL_SIZE / 2, pw, ph, 6);
         ctx.fill();
         ctx.stroke();
       }
@@ -347,23 +353,24 @@ export const Arena = () => {
 
     if (!currentUser) return;
 
-    
-    if(e.metaKey && e.key.toLowerCase() === "i"){
-      if(possibleChairToSit){
 
-        furniture[0].chairs.forEach((e)=>{
-          if(e.chairId === possibleChairToSit){
+    if (e.metaKey && e.key.toLowerCase() === "i") {
+      console.log("button pressed")
+      if (possibleChairToSit) {
+        furniture[0].chairs.forEach((e) => {
+          if (e.chairId === possibleChairToSit) {
             const px = 3 * CELL_SIZE;
             const py = 4 * CELL_SIZE;
             const cx = px + e.dx * CELL_SIZE + CELL_SIZE / 2;
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
-            const x = cx / CELL_SIZE;
-            const y = cy / CELL_SIZE;
-            setCurrentUser({x , y})
-            handleMove(x,y) 
+            const x = Math.floor(cx / CELL_SIZE) + 1;
+            const y = Math.floor(cy / CELL_SIZE) + 1;
+            console.log("sitting in chair", possibleChairToSit, "in sit :", x, y)
+            setCurrentUser({ x, y })
+            handleMove(x, y)
           }
         })
-      }else{
+      } else {
 
       }
     }
@@ -408,9 +415,10 @@ export const Arena = () => {
 
   };
 
-
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
+      <h1>{JSON.stringify(message)}</h1>
+      <h1>current user{JSON.stringify(currentUser)}</h1>
       <h1>possible chair{possibleChairToSit}</h1>
       <h1>{JSON.stringify(chairCordinates)}</h1>
       <h1>user:{users.size}</h1>
