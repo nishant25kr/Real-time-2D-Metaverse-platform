@@ -1,13 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Furniture } from '../types';
 
 const CELL_SIZE = 20;
 
 export const Arena = () => {
-
-  interface chairCordinates {
-    x: number,
-    y: number
-  }
 
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
@@ -31,46 +27,20 @@ export const Arena = () => {
     return message
   }
 
-
-  type FurnitureType = 'rect-table' | 'round-table' | 'solo-desk';
-
-  interface Furniture {
-    id: string;
-    type: FurnitureType;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    label?: string;
-    chairs: { dx: number; dy: number; chairId: number; rotate: number }[];
-  }
-
   const furniture: Furniture[] = [
     {
-      id: 'table-a1', type: 'rect-table', x: 3, y: 4, width: 14, height: 6,
+      id: 'table-a1', type: 'rect-table', x: 2, y: 4, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
-        // { dx: 3,  dy: -1, rotate: 0, chairId:2 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
-        // { dx: 7,  dy: -1, rotate: 0 },
         { dx: 9, dy: -1, rotate: 0, chairId: 3 },
-        // { dx: 11, dy: -1, rotate: 0 },
-
+        { dx: 13, dy: -1, rotate: 180,  chairId:7 },
+        
         { dx: 1, dy: 6, rotate: 180, chairId: 4 },
-        // { dx: 3,  dy: 6, rotate: 180 },
         { dx: 5, dy: 6, rotate: 180, chairId: 5 },
-        // { dx: 7,  dy: 6, rotate: 180 },
-        // { dx: 9,  dy: 6, rotate: 180 },
-        // { dx: 11, dy: 6, rotate: 180 },
-
-        // { dx: -1, dy: 1, rotate: 90 },
-        // { dx: -1, dy: 3, rotate: 90 },
-        // { dx: -1, dy: 5, rotate: 90 },
-
-        // { dx: 14, dy: 1, rotate: 270 },
-        // { dx: 14, dy: 3, rotate: 270 },
-        // { dx: 14, dy: 5, rotate: 270 },
+        { dx: 9,  dy: 6, rotate: 180, chairId: 6 },
+        { dx: 13, dy: 6, rotate: 180,  chairId:7 },
       ]
     }
   ];
@@ -83,23 +53,28 @@ export const Arena = () => {
     }
     chairCordinates.forEach((e: any) => {
       const validCordinates = [
-        { x: e.x, y: e.y },
+        { x: e.x-1, y:e.y-1 },
+        { x: e.x+1, y:e.y-1 },
         { x: e.x - 1, y: e.y },
         { x: e.x, y: e.y - 1 },
-        { x: e.x + 1, y: e.y + 1 },
-        { x: e.x + 2, y: e.y },
-        { x: e.x + 1, y: e.y }
+        { x: e.x + 1, y: e.y},
       ]
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
           console.log("near chair", e.chairId)
-          //write popup message
           setMessage(popUp(`click cmd+I to sit in chair`,"hello"))
+          setCurrentUser((prev:any)=>({
+            ...prev,
+            message : popUp(`cmd+I to sit in chair`,"hello")
+          }))
           setPossibleChairToSit(e.chairId)
 
         } else {
           if (possibleChairToSit != 0) {
             setPossibleChairToSit(0)
+          }
+          if(currentUser.message){
+            delete currentUser.message
           }
         }
       })
@@ -265,8 +240,8 @@ export const Arena = () => {
 
         const id = chair.chairId
         setChairCordinates((prev) => {
-          const newX = Math.floor(cx / CELL_SIZE);
-          const newY = Math.floor(cy / CELL_SIZE);
+          const newX = Math.floor(cx / CELL_SIZE)+1;
+          const newY = Math.floor(cy / CELL_SIZE)+1;
 
           const exists = prev.some((c: any) => c.x === newX && c.y === newY);
           if (exists) return prev;
@@ -330,7 +305,7 @@ export const Arena = () => {
       ctx.fillStyle = '#000';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${currentUser.x}-${currentUser.y}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
+      ctx.fillText(`${currentUser.x}-${currentUser.y} ${currentUser.message? `${currentUser.message}`:""}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
     }
 
     users.forEach(user => {
