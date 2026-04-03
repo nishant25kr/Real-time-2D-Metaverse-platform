@@ -6,6 +6,7 @@ import { Arena } from './Pages/Arena'
 import { Avatar } from './Pages/Avatar'
 import { Dashboard } from './Pages/Dashboard'
 
+
 function App() {
 
   return (

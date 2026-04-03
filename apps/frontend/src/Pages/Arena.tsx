@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
-import type { Furniture } from '../types';
+import  { useEffect, useRef, useState } from 'react';
+import type {  Furniture } from '../types';
 
 const CELL_SIZE = 20;
 
+const pcConfig = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" }
+    ]
+};
+
 export const Arena = () => {
 
+  
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({});
@@ -13,18 +20,28 @@ export const Arena = () => {
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
   const [message, setMessage] = useState<string>()
+  // const [validCordinates, setValidCordinates] = useState<object[]>([])
+  const [localVideoTrack,setLocalVideoTrack] = useState<MediaStreamTrack>()
+  const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
 
+    const sendingPcRef : any= useRef(null);
+    const receivingPcRef : any = useRef(null);
+    const localVideoRef : any = useRef(null);
+    const remoteVideoRef : any = useRef(null);
+    const [meetingId,setMeetingId] = useState<string>("meeting1")
+
+    
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
-    { minX: 21, maxX: 41, minY: 1, maxY: 20, name: "Room B" },
-    { minX: 42, maxX: 62, minY: 1, maxY: 20, name: "Room C" },
+    { minX: 21, maxX: 40, minY: 1, maxY: 20, name: "Room B" },
+    { minX: 41, maxX: 60, minY: 1, maxY: 20, name: "Room C" },
     { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
 
   function popUp(message: string, type: string) {
-    return message
+    return message;
   }
 
   const furniture: Furniture[] = [
@@ -35,45 +52,89 @@ export const Arena = () => {
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
         { dx: 9, dy: -1, rotate: 0, chairId: 3 },
-        { dx: 13, dy: -1, rotate: 180,  chairId:7 },
-        
-        { dx: 1, dy: 6, rotate: 180, chairId: 4 },
-        { dx: 5, dy: 6, rotate: 180, chairId: 5 },
-        { dx: 9,  dy: 6, rotate: 180, chairId: 6 },
-        { dx: 13, dy: 6, rotate: 180,  chairId:7 },
+        { dx: 13, dy: -1, rotate: 0, chairId: 4 },
+
+        { dx: 1, dy: 6, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 6, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 6, rotate: 180, chairId: 7 },
+        { dx: 13, dy: 6, rotate: 180, chairId: 8 },
+      ]
+    },
+    {
+      id: 'table-a1', type: 'rect-table', x: 22, y: 4, width: 16, height: 6,
+      label: 'Meeting',
+      chairs: [
+        { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+        { dx: 5, dy: -1, rotate: 0, chairId: 2 },
+        { dx: 9, dy: -1, rotate: 0, chairId: 3 },
+        { dx: 13, dy: -1, rotate: 180, chairId: 4 },
+
+        { dx: 1, dy: 6, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 6, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 6, rotate: 180, chairId: 7 },
+        { dx: 13, dy: 6, rotate: 180, chairId: 8 },
       ]
     }
   ];
 
-  function isinRoom(x: any, y: any) {
+  // correct logic for cmd+i cordinates
+  // furniture.forEach((i)=>{
+  //     const px = i.x * CELL_SIZE;
+  //     const py = i.y * CELL_SIZE;
+  //     i.chairs.map((chair)=>{
+  //       const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
+  //       const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
+  //       const id = chair.chairId
+  //       setValidCordinates(() => {
+  //         const newX = Math.floor(cx / CELL_SIZE)+1;
+  //         const newY = Math.floor(cy / CELL_SIZE)+1;
+  //         return [{ x: newX, y: newY, chairId: id }];
+  //       });
+  //   })
+  // })
+
+  async function isinRoom(x: any, y: any) {
     if (x > 1 && x < 20 && y > 1 && y < 20) {
       console.log("inside the room")
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true})
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
+      setLocalVideoTrack(videoTrack);
+      setLocalAudioTrack(audioTrack); 
+      
     } else {
 
     }
     chairCordinates.forEach((e: any) => {
-      const validCordinates = [
-        { x: e.x-1, y:e.y-1 },
-        { x: e.x+1, y:e.y-1 },
+
+      const validCordinates = e.direction ? [
+        { x: e.x - 1, y: e.y - 1 },
+        { x: e.x + 1, y: e.y - 1 },
         { x: e.x - 1, y: e.y },
         { x: e.x, y: e.y - 1 },
-        { x: e.x + 1, y: e.y},
+        { x: e.x + 1, y: e.y },
+      ] : [
+        { x: e.x - 1, y: e.y + 1 },
+        { x: e.x - 1, y: e.y },
+        { x: e.x + 1, y: e.y + 1 },
+        { x: e.x, y: e.y + 1 },
+        { x: e.x + 1, y: e.y },
       ]
+
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
           console.log("near chair", e.chairId)
-          setMessage(popUp(`click cmd+I to sit in chair`,"hello"))
-          setCurrentUser((prev:any)=>({
+          setMessage(popUp(`click cmd+I to sit in chair`, "hello"))
+          setCurrentUser((prev: any) => ({
             ...prev,
-            message : popUp(`cmd+I to sit in chair`,"hello")
+            message: popUp(`cmd+I to sit in chair`, "hello")
           }))
           setPossibleChairToSit(e.chairId)
-
         } else {
           if (possibleChairToSit != 0) {
             setPossibleChairToSit(0)
           }
-          if(currentUser.message){
+          if (currentUser.message) {
             delete currentUser.message
           }
         }
@@ -83,6 +144,7 @@ export const Arena = () => {
   }
 
   useEffect(() => {
+
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
@@ -104,6 +166,9 @@ export const Arena = () => {
       const message = JSON.parse(event.data);
       handleWebSocketMessage(message);
     };
+    
+
+    
 
     return () => {
       if (wsRef.current) {
@@ -125,7 +190,7 @@ export const Arena = () => {
         if (message.payload.users.length > 0) {
           const userMap = new Map();
           message.payload.users.forEach((user: any) => {
-            userMap.set(user.id, user); 
+            userMap.set(user.id, user);
           });
           setUsers(userMap);
         }
@@ -150,7 +215,7 @@ export const Arena = () => {
           if (user) {
             user.x = message.payload.x;
             user.y = message.payload.y;
-            users.set(message.payload.userId, user);
+            users.set(message.payload.id, user);
           }
           return users;
         });
@@ -236,17 +301,17 @@ export const Arena = () => {
 
       item.chairs.forEach(chair => {
         const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
-        const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
-
+        const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
         const id = chair.chairId
+        const direction: boolean = chair.rotate == 0 ? true : false
         setChairCordinates((prev) => {
-          const newX = Math.floor(cx / CELL_SIZE)+1;
-          const newY = Math.floor(cy / CELL_SIZE)+1;
+          const newX = Math.floor(cx / CELL_SIZE) + 1;
+          const newY = Math.floor(cy / CELL_SIZE) + 1;
 
           const exists = prev.some((c: any) => c.x === newX && c.y === newY);
           if (exists) return prev;
 
-          return [...prev, { x: newX, y: newY, chairId: id }];
+          return [...prev, { x: newX, y: newY, chairId: id, direction }];
         });
         drawChair(ctx, cx, cy);
       });
@@ -285,15 +350,12 @@ export const Arena = () => {
 
       ctx.fillStyle = 'rgba(0, 150, 255, 0.08)';
       ctx.fillRect(startX, startY, width, height);
-
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
       ctx.strokeRect(startX, startY, width, height);
-
       ctx.fillStyle = '#1e40af';
       ctx.font = 'bold 13px monospace';
       ctx.textAlign = 'center';
-      // ctx.fillText(room.name, startX + width / 2, startY + height / 2);
     });
 
 
@@ -305,7 +367,7 @@ export const Arena = () => {
       ctx.fillStyle = '#000';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${currentUser.x}-${currentUser.y} ${currentUser.message? `${currentUser.message}`:""}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
+      ctx.fillText(`${currentUser.x}-${currentUser.y} ${currentUser.message ? `${currentUser.message}` : ""}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
     }
 
     users.forEach(user => {
@@ -325,9 +387,7 @@ export const Arena = () => {
   }, [currentUser, users]);
 
   const handleKeyDown = (e: any) => {
-
     if (!currentUser) return;
-
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
       console.log("button pressed")
@@ -390,12 +450,116 @@ export const Arena = () => {
 
   };
 
+    // useEffect(() => {
+    //     if (localVideoRef.current && localVideoTrack) {
+    //         const stream = new MediaStream([localVideoTrack]);
+    //         localVideoRef.current.srcObject = stream;
+    //         localVideoRef.current.play().catch(() => { });
+    //     }
+    // }, [localVideoTrack]);
+    
+    // useEffect(() => {
+      
+        //@ts-ignore
+        // wsRef.current.send("send-offer", async ({meetingId}) => {
+
+        //     const pc = new RTCPeerConnection(pcConfig);
+        //     sendingPcRef.current = pc;
+
+        //     const remoteStream = new MediaStream();
+        //     remoteVideoRef.current.srcObject = remoteStream;
+
+        //     pc.ontrack = (event) => {
+        //         remoteStream.addTrack(event.track);
+        //         remoteVideoRef.current?.play().catch(() => { });
+        //     };
+
+        //     if (localVideoTrack) pc.addTrack(localVideoTrack);
+        //     if (localAudioTrack) pc.addTrack(localAudioTrack);
+
+        //     pc.onicecandidate = (e) => {
+        //         if (!e.candidate) return;
+        //         wsRef.current.send("add-ice-candidate", {
+        //             meetingId,
+        //             candidate: e.candidate
+        //         });
+        //     };
+
+        //     const offer = await pc.createOffer();
+        //     await pc.setLocalDescription(offer);
+
+        //     wsRef.current.send("offer", {
+        //         meetingId,
+        //         sdp: offer
+        //     });
+        // },[wsRef]);
+
+        // wsRef.current.on ("offer", async ({ roomId, sdp }) => {
+
+        //     const pc = new RTCPeerConnection(pcConfig);
+        //     receivingPcRef.current = pc;
+
+        //     if (localVideoTrack) pc.addTrack(localVideoTrack);
+        //     if (localAudioTrack) pc.addTrack(localAudioTrack);
+
+        //     const remoteStream = new MediaStream();
+        //     remoteVideoRef.current.srcObject = remoteStream;
+
+        //     pc.ontrack = (event) => {
+        //         remoteStream.addTrack(event.track);
+        //         remoteVideoRef.current?.play().catch(() => { });
+        //     };
+
+        //     pc.onicecandidate = (e) => {
+        //         if (!e.candidate) return;
+        //         socket.emit("add-ice-candidate", {
+        //             roomId,
+        //             type: "receiver",
+        //             candidate: e.candidate
+        //         });
+        //     };
+
+        //     await pc.setRemoteDescription(sdp);
+        //     const answer = await pc.createAnswer();
+        //     await pc.setLocalDescription(answer);
+
+        //     socket.emit("answer", {
+        //         roomId,
+        //         sdp: answer
+        //     });
+        // });
+
+        // wsRef.current.on ("answer", async ({ sdp }) => {
+        //     const pc = sendingPcRef.current;
+        //     if (!pc) return;
+        //     await pc.setRemoteDescription(sdp);
+        // });
+
+        // wsRef.current.on ("add-ice-candidate", ({ candidate, type }) => {
+        //     if (!candidate) return;
+
+        //     try {
+        //         if (type === "sender") {
+        //             receivingPcRef.current?.addIceCandidate(candidate);
+        //         } else {
+        //             sendingPcRef.current?.addIceCandidate(candidate);
+        //         }
+        //     } catch (err) {
+        //         console.error("ICE error", err);
+        //     }
+        // });
+
+        
+    // }, [localVideoTrack, localAudioTrack]);
+
+
+
+
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
+      
       <h1>{JSON.stringify(message)}</h1>
       <h1>current user{JSON.stringify(currentUser)}</h1>
-      <h1>possible chair{possibleChairToSit}</h1>
-      <h1>{JSON.stringify(chairCordinates)}</h1>
       <h1>user:{users.size}</h1>
       <h1>Token:{JSON.stringify(params.token)}</h1>
       <h1>spaceID:{JSON.stringify(params.spaceId)}</h1>
@@ -405,7 +569,9 @@ export const Arena = () => {
           className="bg-white block "
         />
       </div>
+
       <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
+
     </div>
   );
 };

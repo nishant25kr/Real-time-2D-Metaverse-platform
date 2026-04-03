@@ -22,4 +22,9 @@ export interface Furniture {
     chairs: { dx: number; dy: number; chairId: number; rotate: number }[];
 }
 
+export interface DynamicComponentProps {
+  text: string;
+}
+
+
 

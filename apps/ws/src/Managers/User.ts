@@ -118,6 +118,10 @@ export class User {
                         }));
                     }
                     break;
+                    
+                case "offer":
+                    console.log("PARSED DATA",parsedData)
+                break;
             }
         });
     }
