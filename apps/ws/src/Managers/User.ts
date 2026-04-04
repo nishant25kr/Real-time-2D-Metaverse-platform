@@ -4,6 +4,7 @@ import { RoomManager } from "./RoomManagers.js";
 import jwt from 'jsonwebtoken';
 import { JWT_PASSWORD } from "../config.js";
 import client from "@repo/db"
+import { MeetingRoomManager } from "./MeetingRoomManager.js";
 
 function getRandomId(length: number) {
     const character = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890qoeruqojdnksncadlfjk;l"
@@ -53,7 +54,6 @@ export class User {
                     RoomManager.getInstance().addUser(spaceID, this)
                     this.x = Number(space?.width!)
                     this.y = Number(space?.height!)
-                    console.log("INITIAL POSITION SET TO:", this.x, this.y, "from width/height:", space.width, space.height);
                     const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
                     this.ws.send(JSON.stringify({
                         type: "space-joined",
@@ -81,15 +81,15 @@ export class User {
                     break;
 
                 case "move":
-                    console.log("Current pos:", this.x, this.y);
-                    console.log("parsedData", parsedData);
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX);
                     const Ydisplacement = Math.abs(this.y - moveY);
-                    console.log("Displacement:", Xdisplacement, Ydisplacement);
 
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
+                        
+                       
+
                         console.log("move is correct");
                         this.x = moveX;
                         this.y = moveY;
@@ -105,10 +105,13 @@ export class User {
                             this,
                             this.spaceId!
                         );
-                        return;
+                         if(parsedData.payload.isinsideRoom){
+                            MeetingRoomManager.getInstance().addUser("meetingRoom1", this)
+                        }
+                        // return;
                     }
                     else {
-                        console.log("move is not correct");
+                        // console.log("move is not correct");
                         this.ws.send(JSON.stringify({
                             type: "movement-rejected",
                             payload: {
@@ -119,9 +122,14 @@ export class User {
                     }
                     break;
                     
-                case "offer":
+                case "add-ice-candidate":
                     console.log("PARSED DATA",parsedData)
                 break;
+
+                case "offer":
+                    console.log("parsed data inoffer",parsedData)
+                    
+                    break;  
             }
         });
     }

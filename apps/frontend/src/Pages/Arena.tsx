@@ -1,17 +1,15 @@
-import  { useEffect, useRef, useState } from 'react';
-import type {  Furniture } from '../types';
+import { useEffect, useRef, useState } from 'react';
+import type { Furniture } from '../types';
 
 const CELL_SIZE = 20;
 
 const pcConfig = {
-    iceServers: [
-        { urls: "stun:stun.l.google.com:19302" }
-    ]
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" }
+  ]
 };
 
 export const Arena = () => {
-
-  
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({});
@@ -20,17 +18,15 @@ export const Arena = () => {
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
   const [message, setMessage] = useState<string>()
-  // const [validCordinates, setValidCordinates] = useState<object[]>([])
-  const [localVideoTrack,setLocalVideoTrack] = useState<MediaStreamTrack>()
+  const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
-
-    const sendingPcRef : any= useRef(null);
-    const receivingPcRef : any = useRef(null);
-    const localVideoRef : any = useRef(null);
-    const remoteVideoRef : any = useRef(null);
-    const [meetingId,setMeetingId] = useState<string>("meeting1")
-
-    
+  const [isinsideRoom, setisinsideRoom] = useState<boolean>(false)
+  // const remoteVideoRef = useRef(null);
+  const sendingPcRef: any = useRef(null);
+  const receivingPcRef: any = useRef(null);
+  const localVideoRef: any = useRef(null);
+  const remoteVideoRef: any = useRef(null);
+  const [meetingId, setMeetingId] = useState<string>("meeting1")
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -77,36 +73,23 @@ export const Arena = () => {
     }
   ];
 
-  // correct logic for cmd+i cordinates
-  // furniture.forEach((i)=>{
-  //     const px = i.x * CELL_SIZE;
-  //     const py = i.y * CELL_SIZE;
-  //     i.chairs.map((chair)=>{
-  //       const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
-  //       const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
-  //       const id = chair.chairId
-  //       setValidCordinates(() => {
-  //         const newX = Math.floor(cx / CELL_SIZE)+1;
-  //         const newY = Math.floor(cy / CELL_SIZE)+1;
-  //         return [{ x: newX, y: newY, chairId: id }];
-  //       });
-  //   })
-  // })
-
-  async function isinRoom(x: any, y: any) {
-    if (x > 1 && x < 20 && y > 1 && y < 20) {
-      console.log("inside the room")
-      const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true})
-      const videoTrack = stream.getVideoTracks()[0];
-      const audioTrack = stream.getAudioTracks()[0];
+  async function getAccess() {
+    if (!isinsideRoom) return
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
+    const videoTrack = stream.getVideoTracks()[0];
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!localAudioTrack || !localVideoTrack) {
       setLocalVideoTrack(videoTrack);
-      setLocalAudioTrack(audioTrack); 
-      
-    } else {
-
+      setLocalAudioTrack(audioTrack);
     }
-    chairCordinates.forEach((e: any) => {
+  }
 
+  useEffect(() => {
+    getAccess()
+  }, [isinsideRoom])
+
+  async function checkNearChair(x: any, y: any) {
+    chairCordinates.forEach((e: any) => {
       const validCordinates = e.direction ? [
         { x: e.x - 1, y: e.y - 1 },
         { x: e.x + 1, y: e.y - 1 },
@@ -123,7 +106,7 @@ export const Arena = () => {
 
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
-          console.log("near chair", e.chairId)
+          // console.log("near chair", e.chairId)
           setMessage(popUp(`click cmd+I to sit in chair`, "hello"))
           setCurrentUser((prev: any) => ({
             ...prev,
@@ -143,8 +126,19 @@ export const Arena = () => {
     })
   }
 
-  useEffect(() => {
+  function CheckisinsideRoom(x: any, y: any) {
+    if (x > 1 && x < 20 && y > 1 && y < 20) {
+      // console.log("inside the room")
+      setisinsideRoom(true)
+      return true;
+    } else {
+      setisinsideRoom(false)
+      // console.log("not inside then room ")
+      return false;
+    }
+  }
 
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
@@ -166,9 +160,6 @@ export const Arena = () => {
       const message = JSON.parse(event.data);
       handleWebSocketMessage(message);
     };
-    
-
-    
 
     return () => {
       if (wsRef.current) {
@@ -177,7 +168,53 @@ export const Arena = () => {
     };
   }, []);
 
-  const handleWebSocketMessage = (message: any) => {
+  async function recieveOffer() {
+    console.log("insdie ")
+
+    console.log("insdie funciton")
+    const pc = new RTCPeerConnection(pcConfig);
+    sendingPcRef.current = pc;
+
+    const remoteStream = new MediaStream();
+    console.log("remocevideoRef", remoteVideoRef)
+    remoteVideoRef.current.srcObject = remoteStream;
+
+    pc.ontrack = (event) => {
+      console.log("inside ontrack")
+      remoteStream.addTrack(event.track);
+      remoteVideoRef.current?.play().catch(() => { });
+    };
+
+    if (localVideoTrack) pc.addTrack(localVideoTrack);
+    if (localAudioTrack) pc.addTrack(localAudioTrack);
+
+    pc.onicecandidate = (e) => {
+      console.log("inside onicecandidate")
+      if (!e.candidate) return;
+      wsRef.current.send(JSON.stringify({
+        type: "add-ice-candidate",
+        payload: {
+          meetingId: meetingId,
+          candidate: e.candidate
+        }
+      }));
+
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    wsRef.current.send(JSON.stringify({
+        type: "offer",
+        payload: {
+          meetingId: meetingId,
+      sdp: offer
+        }
+      }));
+
+  }
+
+  const handleWebSocketMessage = async (message: any) => {
     switch (message.type) {
       case 'space-joined':
 
@@ -236,18 +273,121 @@ export const Arena = () => {
           return newUsers;
         });
         break;
+
+      case 'offer':
+        async (meetingId: any, sdp: any) => {
+          const pc = new RTCPeerConnection(pcConfig);
+          receivingPcRef.current = pc;
+
+          if (localVideoTrack) pc.addTrack(localVideoTrack);
+          if (localAudioTrack) pc.addTrack(localAudioTrack);
+
+          const remoteStream = new MediaStream();
+          remoteVideoRef.current.srcObject = remoteStream;
+          console.log('[c',pc)
+
+          pc.ontrack = (event) => {
+            remoteStream.addTrack(event.track);
+            remoteVideoRef.current?.play().catch(() => { });
+          };
+
+          pc.onicecandidate = (e) => {
+            if (!e.candidate) return;
+            wsRef.current.send("add-ice-candidate", {
+              meetingId,
+              type: "receiver",
+              candidate: e.candidate
+            });
+          };
+
+          await pc.setRemoteDescription(sdp);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          wsRef.current.send("answer", {
+            meetingId,
+            sdp: answer
+          });
+        };
+        break;
+
+      case "send-offer":
+        await recieveOffer()
+        break;
+
+      case "offer":
+          const pc = new RTCPeerConnection(pcConfig);
+          receivingPcRef.current = pc;
+
+          if (localVideoTrack) pc.addTrack(localVideoTrack);
+          if (localAudioTrack) pc.addTrack(localAudioTrack);
+
+          const remoteStream = new MediaStream();
+          remoteVideoRef.current.srcObject = remoteStream;
+
+          pc.ontrack = (event) => {
+            remoteStream.addTrack(event.track);
+            remoteVideoRef.current?.play().catch(() => { });
+          };
+
+          pc.onicecandidate = (e) => {
+            if (!e.candidate) return;
+            socket.emit("add-ice-candidate", {
+              roomId,
+              type: "receiver",
+              candidate: e.candidate
+            });
+          };
+
+          await pc.setRemoteDescription(sdp);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+
+          socket.emit("answer", {
+            roomId,
+            sdp: answer
+          });
+
+        break;
+
+      case "answer":
+        async (sdp: any) => {
+          const pc = sendingPcRef.current;
+          if (!pc) return;
+          await pc.setRemoteDescription(sdp);
+        }
+        break;
+
+      case "add-ice-candidate":
+        (candidate: any, type: any) => {
+          if (!candidate) return;
+          try {
+            if (type === "sender") {
+              receivingPcRef.current?.addIceCandidate(candidate);
+            } else {
+              sendingPcRef.current?.addIceCandidate(candidate);
+            }
+          } catch (err) {
+            // console.error("ICE error", err);
+          }
+        }
+        break;
+
     }
   };
 
   const handleMove = (newX: any, newY: any) => {
     if (!currentUser) return;
-    isinRoom(newX, newY)
+    checkNearChair(newX, newY)
+    const inside = CheckisinsideRoom(newX, newY)
+    // console.log("isinsideRoom",inside)
     wsRef.current.send(JSON.stringify({
       type: 'move',
       payload: {
         x: newX,
         y: newY,
-        userId: currentUser.userId
+        userId: currentUser.userId,
+        isinsideRoom: inside,
       }
     }));
   };
@@ -390,7 +530,7 @@ export const Arena = () => {
     if (!currentUser) return;
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
-      console.log("button pressed")
+      // console.log("button pressed")
       if (possibleChairToSit) {
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
@@ -400,7 +540,7 @@ export const Arena = () => {
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
-            console.log("sitting in chair", possibleChairToSit, "in sit :", x, y)
+            // console.log("sitting in chair", possibleChairToSit, "in sit :", x, y)
             setCurrentUser({ x, y })
             handleMove(x, y)
           }
@@ -450,128 +590,45 @@ export const Arena = () => {
 
   };
 
-    // useEffect(() => {
-    //     if (localVideoRef.current && localVideoTrack) {
-    //         const stream = new MediaStream([localVideoTrack]);
-    //         localVideoRef.current.srcObject = stream;
-    //         localVideoRef.current.play().catch(() => { });
-    //     }
-    // }, [localVideoTrack]);
-    
-    // useEffect(() => {
-      
-        //@ts-ignore
-        // wsRef.current.send("send-offer", async ({meetingId}) => {
-
-        //     const pc = new RTCPeerConnection(pcConfig);
-        //     sendingPcRef.current = pc;
-
-        //     const remoteStream = new MediaStream();
-        //     remoteVideoRef.current.srcObject = remoteStream;
-
-        //     pc.ontrack = (event) => {
-        //         remoteStream.addTrack(event.track);
-        //         remoteVideoRef.current?.play().catch(() => { });
-        //     };
-
-        //     if (localVideoTrack) pc.addTrack(localVideoTrack);
-        //     if (localAudioTrack) pc.addTrack(localAudioTrack);
-
-        //     pc.onicecandidate = (e) => {
-        //         if (!e.candidate) return;
-        //         wsRef.current.send("add-ice-candidate", {
-        //             meetingId,
-        //             candidate: e.candidate
-        //         });
-        //     };
-
-        //     const offer = await pc.createOffer();
-        //     await pc.setLocalDescription(offer);
-
-        //     wsRef.current.send("offer", {
-        //         meetingId,
-        //         sdp: offer
-        //     });
-        // },[wsRef]);
-
-        // wsRef.current.on ("offer", async ({ roomId, sdp }) => {
-
-        //     const pc = new RTCPeerConnection(pcConfig);
-        //     receivingPcRef.current = pc;
-
-        //     if (localVideoTrack) pc.addTrack(localVideoTrack);
-        //     if (localAudioTrack) pc.addTrack(localAudioTrack);
-
-        //     const remoteStream = new MediaStream();
-        //     remoteVideoRef.current.srcObject = remoteStream;
-
-        //     pc.ontrack = (event) => {
-        //         remoteStream.addTrack(event.track);
-        //         remoteVideoRef.current?.play().catch(() => { });
-        //     };
-
-        //     pc.onicecandidate = (e) => {
-        //         if (!e.candidate) return;
-        //         socket.emit("add-ice-candidate", {
-        //             roomId,
-        //             type: "receiver",
-        //             candidate: e.candidate
-        //         });
-        //     };
-
-        //     await pc.setRemoteDescription(sdp);
-        //     const answer = await pc.createAnswer();
-        //     await pc.setLocalDescription(answer);
-
-        //     socket.emit("answer", {
-        //         roomId,
-        //         sdp: answer
-        //     });
-        // });
-
-        // wsRef.current.on ("answer", async ({ sdp }) => {
-        //     const pc = sendingPcRef.current;
-        //     if (!pc) return;
-        //     await pc.setRemoteDescription(sdp);
-        // });
-
-        // wsRef.current.on ("add-ice-candidate", ({ candidate, type }) => {
-        //     if (!candidate) return;
-
-        //     try {
-        //         if (type === "sender") {
-        //             receivingPcRef.current?.addIceCandidate(candidate);
-        //         } else {
-        //             sendingPcRef.current?.addIceCandidate(candidate);
-        //         }
-        //     } catch (err) {
-        //         console.error("ICE error", err);
-        //     }
-        // });
-
-        
-    // }, [localVideoTrack, localAudioTrack]);
-
-
-
+  useEffect(() => {
+    // console.log("inside")
+    if (localVideoRef.current && localVideoTrack) {
+      // console.log("insdie usereffect")
+      const stream = new MediaStream([localVideoTrack]);
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.play().catch(() => { });
+    }
+  }, [localVideoTrack]);
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
-      
       <h1>{JSON.stringify(message)}</h1>
       <h1>current user{JSON.stringify(currentUser)}</h1>
       <h1>user:{users.size}</h1>
       <h1>Token:{JSON.stringify(params.token)}</h1>
       <h1>spaceID:{JSON.stringify(params.spaceId)}</h1>
+      <video
+        ref={localVideoRef}
+        autoPlay
+        playsInline
+        muted
+        className="w-40 h-30 object-cover"
+      />
       <div className="border m-3 overflow-scrollrounded-lg">
         <canvas
           ref={canvasRef}
           className="bg-white block "
         />
       </div>
-
       <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
-
+      
+      <video
+        ref={remoteVideoRef}
+        autoPlay
+        playsInline
+        muted
+        className="w-30 h-30 object-cover"
+      />
     </div>
   );
 };
