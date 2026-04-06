@@ -87,10 +87,6 @@ export class User {
                     const Ydisplacement = Math.abs(this.y - moveY);
 
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
-                        
-                       
-
-                        console.log("move is correct");
                         this.x = moveX;
                         this.y = moveY;
                         RoomManager.getInstance().broadcast(
@@ -127,9 +123,13 @@ export class User {
                 break;
 
                 case "offer":
-                    console.log("parsed data inoffer",parsedData)
-                    
+                    MeetingRoomManager.getInstance().onOffer(parsedData.payload.meetingId,parsedData.payload.sdp,this);
                     break;  
+
+                case "answer":
+                    console.log('insdie answer',parsedData)
+                    MeetingRoomManager.getInstance().onAnswer(parsedData.payload.meetingId, parsedData.payload.sdp, this)
+                break;  
             }
         });
     }

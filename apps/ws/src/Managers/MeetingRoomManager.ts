@@ -24,18 +24,13 @@ export class MeetingRoomManager {
         const length = this.meetingRoom.get(meetingId)?.length!
         console.log("length",length)
         if(length < 2) return;
-    
+        
         this.broadcast({ type: "send-offer", payload: { meetingId: meetingId } }, user, meetingId);
-    }
-    
-    public onOffer() {
-
     }
 
     public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
         console.log("inside the broadcast",message.type)
         if (!this.meetingRoom.get(meetingId)?.find(u => u === user)) return
-        console.log("user found")
         this.meetingRoom.get(meetingId)?.forEach((e) => {
             if (e.id !== user.id) {
                 e.ws.send(
@@ -43,6 +38,44 @@ export class MeetingRoomManager {
                 )
             }
         })
+    }
+
+    public onOffer(meetingId:string, sdp:any, user: User){
+        const room = this.meetingRoom.get(meetingId);
+        if (!room) return;
+
+        this.broadcast({ type: "offer", payload: { meetingId: meetingId, sdp }},user,meetingId)
+    }
+
+    public onAnswer(meetingId: string, sdp: any, user:User){
+        if(!meetingId || !sdp || !user) return;
+
+        const room = this.meetingRoom.get(meetingId)
+
+        if(!room) return;
+
+        const message = {
+            type: "answer", 
+            payload : {
+                meetingId,
+                sdp
+            }
+        }
+        this.broadcast(message,user,meetingId)
+    }
+
+    public onIceCandidate(meetingId: string, senderSocketId: WebSocket, user: User) {
+        const room = this.meetingRoom.get(meetingId);
+        if (!room || !user) return;
+        
+        const receiver =
+            room.user1.socket.id === senderSocketId
+                ? room.user2
+                : room.user1;
+
+        receiver.socket.emit("add-ice-candidate", {
+            candidate
+        });
     }
 
     public removeUser(meetingId: string, userId: string) {

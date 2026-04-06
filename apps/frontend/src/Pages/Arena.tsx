@@ -168,22 +168,25 @@ export const Arena = () => {
     };
   }, []);
 
-  async function recieveOffer() {
-    console.log("insdie ")
+  async function sendOffer() {
 
     console.log("insdie funciton")
     const pc = new RTCPeerConnection(pcConfig);
+    console.log("pc",pc.ontrack)
     sendingPcRef.current = pc;
 
     const remoteStream = new MediaStream();
-    console.log("remocevideoRef", remoteVideoRef)
-    remoteVideoRef.current.srcObject = remoteStream;
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+    console.log("remote stream1",remoteStream.addTrack)
 
     pc.ontrack = (event) => {
-      console.log("inside ontrack")
+      alert("inside ontrack")
       remoteStream.addTrack(event.track);
       remoteVideoRef.current?.play().catch(() => { });
     };
+    console.log("remote stream2",remoteStream.addTrack)
 
     if (localVideoTrack) pc.addTrack(localVideoTrack);
     if (localAudioTrack) pc.addTrack(localAudioTrack);
@@ -191,28 +194,33 @@ export const Arena = () => {
     pc.onicecandidate = (e) => {
       console.log("inside onicecandidate")
       if (!e.candidate) return;
-      wsRef.current.send(JSON.stringify({
-        type: "add-ice-candidate",
-        payload: {
-          meetingId: meetingId,
-          candidate: e.candidate
-        }
-      }));
-
+      if (wsRef.current) {
+        wsRef.current.send(JSON.stringify({
+          type: "add-ice-candidate",
+          payload: {
+            meetingId: meetingId,
+            candidate: e.candidate
+          }
+        }));
+      }
     };
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
     wsRef.current.send(JSON.stringify({
-        type: "offer",
-        payload: {
-          meetingId: meetingId,
-      sdp: offer
-        }
-      }));
-
+      type: "offer",
+      payload: {
+        meetingId: "meetingRoom1",
+        sdp: offer
+      }
+    }));
   }
+
+  async function onAnswerReceive (sdp: any) {
+          const pc = sendingPcRef.current;
+          if (!pc) return;
+          await pc.setRemoteDescription(sdp);
+        }
 
   const handleWebSocketMessage = async (message: any) => {
     switch (message.type) {
@@ -274,105 +282,72 @@ export const Arena = () => {
         });
         break;
 
-      case 'offer':
-        async (meetingId: any, sdp: any) => {
-          const pc = new RTCPeerConnection(pcConfig);
-          receivingPcRef.current = pc;
-
-          if (localVideoTrack) pc.addTrack(localVideoTrack);
-          if (localAudioTrack) pc.addTrack(localAudioTrack);
-
-          const remoteStream = new MediaStream();
-          remoteVideoRef.current.srcObject = remoteStream;
-          console.log('[c',pc)
-
-          pc.ontrack = (event) => {
-            remoteStream.addTrack(event.track);
-            remoteVideoRef.current?.play().catch(() => { });
-          };
-
-          pc.onicecandidate = (e) => {
-            if (!e.candidate) return;
-            wsRef.current.send("add-ice-candidate", {
-              meetingId,
-              type: "receiver",
-              candidate: e.candidate
-            });
-          };
-
-          await pc.setRemoteDescription(sdp);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-
-          wsRef.current.send("answer", {
-            meetingId,
-            sdp: answer
-          });
-        };
-        break;
-
       case "send-offer":
-        await recieveOffer()
+        await sendOffer()
         break;
 
       case "offer":
-          const pc = new RTCPeerConnection(pcConfig);
-          receivingPcRef.current = pc;
 
-          if (localVideoTrack) pc.addTrack(localVideoTrack);
-          if (localAudioTrack) pc.addTrack(localAudioTrack);
+        const pc = new RTCPeerConnection(pcConfig);
+        receivingPcRef.current = pc;
 
-          const remoteStream = new MediaStream();
-          remoteVideoRef.current.srcObject = remoteStream;
+        if (localVideoTrack) pc.addTrack(localVideoTrack);
+        if (localAudioTrack) pc.addTrack(localAudioTrack);
 
-          pc.ontrack = (event) => {
-            remoteStream.addTrack(event.track);
-            remoteVideoRef.current?.play().catch(() => { });
-          };
+        const remoteStream = new MediaStream();
+        remoteVideoRef.current.srcObject = remoteStream;
 
-          pc.onicecandidate = (e) => {
-            if (!e.candidate) return;
-            socket.emit("add-ice-candidate", {
-              roomId,
+        pc.ontrack = (event) => {
+            console.log("TRACK RECEIVED 🔥");
+
+          remoteStream.addTrack(event.track);
+          remoteVideoRef.current?.play().catch(() => { });
+        };
+
+        pc.onicecandidate = (e) => {
+          if (!e.candidate) return;
+          wsRef.current.send(JSON.stringify({
+            type: "add-ice-candidate",
+            payload: {
+              roomId: meetingId,
               type: "receiver",
               candidate: e.candidate
-            });
-          };
+            }
 
-          await pc.setRemoteDescription(sdp);
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
+          }))
+        };
 
-          socket.emit("answer", {
-            roomId,
-            sdp: answer
-          });
+        await pc.setRemoteDescription(message.payload.sdp);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
+        wsRef.current.send(JSON.stringify({
+          type: "answer",
+          payload: {
+            meetingId: "meetingRoom1",
+            sdp:answer
+          }
+        }))
         break;
 
       case "answer":
-        async (sdp: any) => {
-          const pc = sendingPcRef.current;
-          if (!pc) return;
-          await pc.setRemoteDescription(sdp);
-        }
+        await onAnswerReceive(message.payload.sdp)
         break;
 
       case "add-ice-candidate":
-        (candidate: any, type: any) => {
+          const candidate = message.payload.can
           if (!candidate) return;
           try {
-            if (type === "sender") {
+            if (message.type === "sender") {
               receivingPcRef.current?.addIceCandidate(candidate);
             } else {
               sendingPcRef.current?.addIceCandidate(candidate);
             }
           } catch (err) {
-            // console.error("ICE error", err);
+            console.error("ICE error", err);
           }
-        }
-        break;
 
+        break;
     }
   };
 
@@ -621,7 +596,7 @@ export const Arena = () => {
         />
       </div>
       <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
-      
+
       <video
         ref={remoteVideoRef}
         autoPlay
