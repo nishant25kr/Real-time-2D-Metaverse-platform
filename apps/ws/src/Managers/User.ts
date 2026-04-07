@@ -119,15 +119,20 @@ export class User {
                     break;
                     
                 case "add-ice-candidate":
-                    console.log("PARSED DATA",parsedData)
-                break;
+                    console.log("PARSED DATA", parsedData)
+                    MeetingRoomManager.getInstance().onIceCandidate(
+                        parsedData.payload.meetingId,
+                        parsedData.payload.candidate,
+                        parsedData.payload.type,
+                        this
+                    )
+                    break;
 
                 case "offer":
                     MeetingRoomManager.getInstance().onOffer(parsedData.payload.meetingId,parsedData.payload.sdp,this);
                     break;  
 
                 case "answer":
-                    console.log('insdie answer',parsedData)
                     MeetingRoomManager.getInstance().onAnswer(parsedData.payload.meetingId, parsedData.payload.sdp, this)
                 break;  
             }

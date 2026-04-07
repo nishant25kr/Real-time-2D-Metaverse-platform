@@ -22,8 +22,6 @@ export class RoomManager {
             return;
         }
         this.rooms.set(spaceId, [...(this.rooms.get(spaceId) ?? []), user])
-
-        
     }
 
     public broadcast(message: OutgoingMessage, user: User, roomId: string) {

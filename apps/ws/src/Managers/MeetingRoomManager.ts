@@ -64,18 +64,20 @@ export class MeetingRoomManager {
         this.broadcast(message,user,meetingId)
     }
 
-    public onIceCandidate(meetingId: string, senderSocketId: WebSocket, user: User) {
+    public onIceCandidate(meetingId: string, candidate: any, type: string, user: User) {
+        console.log("inside onicecandidate")
         const room = this.meetingRoom.get(meetingId);
         if (!room || !user) return;
         
-        const receiver =
-            room.user1.socket.id === senderSocketId
-                ? room.user2
-                : room.user1;
+        const message = {
+            type: "add-ice-candidate",
+            payload: {
+                candidate,
+                type
+            }
+        };
 
-        receiver.socket.emit("add-ice-candidate", {
-            candidate
-        });
+        this.broadcast(message, user, meetingId);
     }
 
     public removeUser(meetingId: string, userId: string) {

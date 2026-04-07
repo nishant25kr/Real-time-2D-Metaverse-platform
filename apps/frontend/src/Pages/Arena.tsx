@@ -3,11 +3,14 @@ import type { Furniture } from '../types';
 
 const CELL_SIZE = 20;
 
-const pcConfig = {
+const configuration = {
   iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
   ]
 };
+
+
 
 export const Arena = () => {
   const canvasRef = useRef<any>(null);
@@ -21,12 +24,12 @@ export const Arena = () => {
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
   const [isinsideRoom, setisinsideRoom] = useState<boolean>(false)
-  // const remoteVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
   const sendingPcRef: any = useRef(null);
   const receivingPcRef: any = useRef(null);
   const localVideoRef: any = useRef(null);
-  const remoteVideoRef: any = useRef(null);
-  const [meetingId, setMeetingId] = useState<string>("meeting1")
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -74,13 +77,21 @@ export const Arena = () => {
   ];
 
   async function getAccess() {
-    if (!isinsideRoom) return
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-    const videoTrack = stream.getVideoTracks()[0];
-    const audioTrack = stream.getAudioTracks()[0];
-    if (!localAudioTrack || !localVideoTrack) {
-      setLocalVideoTrack(videoTrack);
-      setLocalAudioTrack(audioTrack);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true
+      });
+
+      setLocalStream(stream);
+      setLocalVideoTrack(stream.getVideoTracks()[0]);
+      setLocalAudioTrack(stream.getAudioTracks()[0]);
+
+      console.log("✅ media ready");
+
+      return stream
+    } catch (err) {
+      console.error("❌ getUserMedia failed", err);
     }
   }
 
@@ -127,15 +138,12 @@ export const Arena = () => {
   }
 
   function CheckisinsideRoom(x: any, y: any) {
-    if (x > 1 && x < 20 && y > 1 && y < 20) {
-      // console.log("inside the room")
-      setisinsideRoom(true)
-      return true;
-    } else {
-      setisinsideRoom(false)
-      // console.log("not inside then room ")
-      return false;
-    }
+    const inside = rooms.some(room =>
+      x >= room.minX && x <= room.maxX && y >= room.minY && y <= room.maxY
+    );
+
+    setisinsideRoom(inside);
+    return inside;
   }
 
   useEffect(() => {
@@ -169,58 +177,167 @@ export const Arena = () => {
   }, []);
 
   async function sendOffer() {
+    console.log("inside function");
 
-    console.log("insdie funciton")
-    const pc = new RTCPeerConnection(pcConfig);
-    console.log("pc",pc.ontrack)
+    let stream: any = null;
+    if (!localVideoTrack || !localAudioTrack) {
+      stream = await getAccess();
+    }
+
+    if (!stream && (!localVideoTrack || !localAudioTrack)) {
+      return;
+    }
+
+    const pc = new RTCPeerConnection(configuration);
     sendingPcRef.current = pc;
 
-    const remoteStream = new MediaStream();
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
+    if (stream) {
+      stream.getTracks().forEach((track: any) => {
+        pc.addTrack(track, stream!);
+      });
+    } else {
+      if (localVideoTrack) pc.addTrack(localVideoTrack);
+      if (localAudioTrack) pc.addTrack(localAudioTrack);
     }
-    console.log("remote stream1",remoteStream.addTrack)
-
-    pc.ontrack = (event) => {
-      alert("inside ontrack")
-      remoteStream.addTrack(event.track);
-      remoteVideoRef.current?.play().catch(() => { });
-    };
-    console.log("remote stream2",remoteStream.addTrack)
-
-    if (localVideoTrack) pc.addTrack(localVideoTrack);
-    if (localAudioTrack) pc.addTrack(localAudioTrack);
 
     pc.onicecandidate = (e) => {
-      console.log("inside onicecandidate")
       if (!e.candidate) return;
-      if (wsRef.current) {
-        wsRef.current.send(JSON.stringify({
-          type: "add-ice-candidate",
-          payload: {
-            meetingId: meetingId,
-            candidate: e.candidate
-          }
-        }));
-      }
+
+      wsRef.current?.send(JSON.stringify({
+        type: "add-ice-candidate",
+        payload: {
+          meetingId: "meetingRoom1",
+          type: "sender",
+          candidate: e.candidate
+        }
+      }));
     };
 
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    wsRef.current.send(JSON.stringify({
-      type: "offer",
-      payload: {
-        meetingId: "meetingRoom1",
-        sdp: offer
+    let remoteStream: MediaStream | null = null;
+
+    pc.ontrack = (event) => {
+      console.log("event", event)
+
+      const videoEl = remoteVideoRef.current as HTMLVideoElement | null;
+      if (!videoEl) return;
+
+      if (!remoteStream) {
+        remoteStream = new MediaStream();
+        videoEl.srcObject = remoteStream;
+
+        videoEl.muted = true;
+
+        videoEl.onloadedmetadata = () => {
+          videoEl.play()
+            .then(() => console.log("✅ SENDER REMOTE VIDEO PLAYING"))
+            .catch(err => console.log("❌ SENDER REMOTE PLAY FAILED", err));
+        };
       }
-    }));
+
+      remoteStream.addTrack(event.track);
+    };
+
+    try {
+      console.log("Creating offer...");
+      const offer = await pc.createOffer();
+
+      await pc.setLocalDescription(offer);
+      console.log("Local description set ✅");
+
+      wsRef.current?.send(JSON.stringify({
+        type: "offer",
+        payload: {
+          meetingId: "meetingRoom1",
+          sdp: offer
+        }
+      }));
+
+    } catch (err) {
+      console.error("❌ OFFER ERROR", err);
+    }
   }
 
-  async function onAnswerReceive (sdp: any) {
-          const pc = sendingPcRef.current;
-          if (!pc) return;
-          await pc.setRemoteDescription(sdp);
+  async function receiveOffer(message: any) {
+    console.log("inside offer", message.payload);
+
+    let currentStream: MediaStream | null = localStream;
+    if (!localVideoTrack || !localAudioTrack) {
+      currentStream = await getAccess() as MediaStream;
+    }
+
+    remoteStreamRef.current = null;
+
+    const pc = new RTCPeerConnection(configuration);
+    receivingPcRef.current = pc;
+
+    if (currentStream) {
+      currentStream.getTracks().forEach(track => {
+        pc.addTrack(track, currentStream!);
+      });
+    } else {
+      if (localVideoTrack) pc.addTrack(localVideoTrack);
+      if (localAudioTrack) pc.addTrack(localAudioTrack);
+    }
+
+    pc.ontrack = (event) => {
+      console.log("TRACK RECEIVED:", event.track.kind);
+
+      const videoEl = remoteVideoRef.current as HTMLVideoElement | null;
+      if (!videoEl) return;
+
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+
+        videoEl.srcObject = remoteStreamRef.current;
+        // videoEl.muted = true; // Still muted for now to avoid feedback
+
+        videoEl.onloadedmetadata = () => {
+          videoEl.play()
+            .then(() => console.log("✅ REMOTE VIDEO PLAYING"))
+            .catch(err => console.log("❌ REMOTE PLAY FAILED", err));
+        };
+      }
+
+      remoteStreamRef.current.addTrack(event.track);
+    };
+
+    pc.onicecandidate = (e) => {
+      if (!e.candidate) return;
+
+      wsRef.current?.send(JSON.stringify({
+        type: "add-ice-candidate",
+        payload: {
+          meetingId: "meetingRoom1", // ✅ FIXED
+          type: "receiver",
+          candidate: e.candidate
         }
+      }));
+    };
+
+    pc.oniceconnectionstatechange = () => {
+      console.log("RECEIVER ICE STATE:", pc.iceConnectionState);
+    };
+
+    await pc.setRemoteDescription(message.payload.sdp);
+
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    wsRef.current?.send(JSON.stringify({
+      type: "answer",
+      payload: {
+        meetingId: "meetingRoom1", // ✅ FIXED
+        sdp: answer
+      }
+    }));
+
+  }
+
+  async function onAnswerReceive(sdp: any) {
+    const pc = sendingPcRef.current;
+    if (!pc) return;
+    await pc.setRemoteDescription(sdp);
+  }
 
   const handleWebSocketMessage = async (message: any) => {
     switch (message.type) {
@@ -287,67 +404,31 @@ export const Arena = () => {
         break;
 
       case "offer":
-
-        const pc = new RTCPeerConnection(pcConfig);
-        receivingPcRef.current = pc;
-
-        if (localVideoTrack) pc.addTrack(localVideoTrack);
-        if (localAudioTrack) pc.addTrack(localAudioTrack);
-
-        const remoteStream = new MediaStream();
-        remoteVideoRef.current.srcObject = remoteStream;
-
-        pc.ontrack = (event) => {
-            console.log("TRACK RECEIVED 🔥");
-
-          remoteStream.addTrack(event.track);
-          remoteVideoRef.current?.play().catch(() => { });
-        };
-
-        pc.onicecandidate = (e) => {
-          if (!e.candidate) return;
-          wsRef.current.send(JSON.stringify({
-            type: "add-ice-candidate",
-            payload: {
-              roomId: meetingId,
-              type: "receiver",
-              candidate: e.candidate
-            }
-
-          }))
-        };
-
-        await pc.setRemoteDescription(message.payload.sdp);
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-
-        wsRef.current.send(JSON.stringify({
-          type: "answer",
-          payload: {
-            meetingId: "meetingRoom1",
-            sdp:answer
-          }
-        }))
+        alert("offer recieved")
+        await receiveOffer(message)
         break;
 
       case "answer":
         await onAnswerReceive(message.payload.sdp)
         break;
 
-      case "add-ice-candidate":
-          const candidate = message.payload.can
-          if (!candidate) return;
-          try {
-            if (message.type === "sender") {
-              receivingPcRef.current?.addIceCandidate(candidate);
-            } else {
-              sendingPcRef.current?.addIceCandidate(candidate);
-            }
-          } catch (err) {
-            console.error("ICE error", err);
-          }
 
+      case "add-ice-candidate":
+        const { candidate, type } = message.payload;
+
+        if (!candidate) return;
+
+        try {
+          if (type === "sender") {
+            receivingPcRef.current?.addIceCandidate(candidate);
+          } else {
+            sendingPcRef.current?.addIceCandidate(candidate);
+          }
+        } catch (err) {
+          console.error("ICE error", err);
+        }
         break;
+
     }
   };
 
