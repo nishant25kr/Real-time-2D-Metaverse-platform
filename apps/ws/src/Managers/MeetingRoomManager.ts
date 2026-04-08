@@ -18,7 +18,6 @@ export class MeetingRoomManager {
 
     public addUser(meetingId: string, user: User) {
         const roomUsers = this.meetingRoom.get(meetingId) || [];
-        // Remove existing session for same userId to prevent ghost sessions
         this.meetingRoom.set(meetingId, roomUsers.filter(u => u.userId !== user.userId));
         
         this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user]);

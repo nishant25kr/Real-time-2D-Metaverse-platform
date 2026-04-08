@@ -19,7 +19,7 @@ export const Arena = () => {
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
-  const [isinsideRoom, setisinsideRoom] = useState<boolean>(false)
+  const [isSitting, setIsSitting] = useState<boolean>(false)
   const peerRef = useRef(new Map<string, RTCPeerConnection>())
   const localVideoRef: any = useRef(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -55,7 +55,7 @@ export const Arena = () => {
       ]
     },
     {
-      id: 'table-a1', type: 'rect-table', x: 22, y: 4, width: 16, height: 6,
+      id: 'table-a2', type: 'rect-table', x: 22, y: 4, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -129,8 +129,11 @@ export const Arena = () => {
   }
 
   async function checkNearChair(x: any, y: any) {
+    console.log("inside checknearchair")
+
+    let validCordinates: Array<object> = [];
     chairCordinates.forEach((e: any) => {
-      const validCordinates = e.direction ? [
+      validCordinates = e.direction ? [
         { x: e.x - 1, y: e.y - 1 },
         { x: e.x + 1, y: e.y - 1 },
         { x: e.x - 1, y: e.y },
@@ -144,12 +147,15 @@ export const Arena = () => {
         { x: e.x + 1, y: e.y },
       ]
 
-      validCordinates.forEach((c) => {
+      validCordinates.forEach((c: any) => {
         if (c.x == x && c.y == y) {
+          console.log("near chair")
+          console.log(currentUser)
           setCurrentUser((prev: any) => ({
             ...prev,
             message: `cmd+I to sit in chair`
           }))
+          console.log(currentUser)
           setPossibleChairToSit(e.chairId)
         } else {
           if (possibleChairToSit != 0) {
@@ -166,6 +172,7 @@ export const Arena = () => {
       })
 
     })
+
   }
 
   function CheckisinsideRoom(x: any, y: any) {
@@ -472,7 +479,6 @@ export const Arena = () => {
     }
   };
 
-  // Update the message handler ref every render to keep it fresh
   onMessageRef.current = handleWebSocketMessage;
 
   const cleanupPeerConnection = (userId: string) => {
@@ -490,18 +496,11 @@ export const Arena = () => {
   };
 
   const handleMove = (newX: any, newY: any) => {
+    console.log("inside handle move ")
     if (!currentUser) return;
     checkNearChair(newX, newY)
-    const inside = CheckisinsideRoom(newX, newY)
-    wsRef.current.send(JSON.stringify({
-      type: 'move',
-      payload: {
-        x: newX,
-        y: newY,
-        userId: currentUser.userId,
-        isinsideRoom: inside,
-      }
-    }));
+    getAccess()
+
   };
 
   useEffect(() => {
@@ -643,18 +642,30 @@ export const Arena = () => {
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (possibleChairToSit) {
+        console.log("key pressed")
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
-            const px = 3 * CELL_SIZE;
+            const px = 2 * CELL_SIZE;
             const py = 4 * CELL_SIZE;
             const cx = px + e.dx * CELL_SIZE + CELL_SIZE / 2;
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
-            setCurrentUser(prev => ({ ...prev, x, y }))
+            console.log("chaid x y", x, y)
+            setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
             handleMove(x, y)
           }
         })
+        const inside = CheckisinsideRoom(currentUser.x, currentUser.y)
+        wsRef.current.send(JSON.stringify({
+          type: 'move',
+          payload: {
+            x: currentUser.x,
+            y: currentUser.y,
+            userId: currentUser.userId,
+            isinsideRoom: inside,
+          }
+        }));
       }
     }
 
@@ -695,7 +706,6 @@ export const Arena = () => {
         });
         break;
     }
-
   };
 
   useEffect(() => {
@@ -708,21 +718,24 @@ export const Arena = () => {
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
-      <h1>{JSON.stringify(currentUser.userId)}</h1>
+      <h1>{JSON.stringify(currentUser)}</h1>
+      <h1>{JSON.stringify(possibleChairToSit)}</h1>
+
       <div className="flex gap-7 mt-4">
         <div className='relative'>
 
           <p className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1">{currentUser.userId}</p>
-          <video
-            ref={(el) => {
-                  localVideoRef.current = el;
-                  if (el) el.srcObject = localStream;
-                }}
-            autoPlay
-            playsInline
-            muted
-            className="w-40 h-32 bg-black object-cover rounded-lg"
-          />
+          {localStream &&
+            <video
+              ref={(el) => {
+                localVideoRef.current = el;
+                if (el) el.srcObject = localStream;
+              }}
+              autoPlay
+              playsInline
+              muted
+              className="w-40 h-32 bg-black object-cover rounded-lg"
+            />}
         </div>
 
         <div className=" flex flex-wrap  gap-7 ">
@@ -742,6 +755,7 @@ export const Arena = () => {
           ))}
         </div>
       </div>
+      <h1>{JSON.stringify(chairCordinates)}</h1>
       <div className="border m-3 overflow-scrollrounded-lg">
         <canvas
           ref={canvasRef}
