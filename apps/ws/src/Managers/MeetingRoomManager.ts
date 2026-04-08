@@ -17,19 +17,26 @@ export class MeetingRoomManager {
     }
 
     public addUser(meetingId: string, user: User) {
-        if (this.meetingRoom.get(meetingId)?.find( u => u.id === user.id)) return
-
-        this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user])
-        console.log("length",typeof this.meetingRoom.get(meetingId)?.length)
-        const length = this.meetingRoom.get(meetingId)?.length!
-        console.log("length",length)
-        if(length < 2) return;
+        const roomUsers = this.meetingRoom.get(meetingId) || [];
+        // Remove existing session for same userId to prevent ghost sessions
+        this.meetingRoom.set(meetingId, roomUsers.filter(u => u.userId !== user.userId));
         
-        this.broadcast({ type: "send-offer", payload: { meetingId: meetingId } }, user, meetingId);
+        this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user]);
+        const length = this.meetingRoom.get(meetingId)?.length!
+        if (length < 2) return;
+
+        user.ws.send(
+            JSON.stringify({
+                type: "init-call",
+                payload: {
+                    meetingId: meetingId,
+                    id: Array.from(new Set(this.meetingRoom.get(meetingId)?.map(u => u.userId))) || [],
+                }
+            })
+        )
     }
 
     public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
-        console.log("inside the broadcast",message.type)
         if (!this.meetingRoom.get(meetingId)?.find(u => u === user)) return
         this.meetingRoom.get(meetingId)?.forEach((e) => {
             if (e.id !== user.id) {
@@ -40,50 +47,75 @@ export class MeetingRoomManager {
         })
     }
 
-    public onOffer(meetingId:string, sdp:any, user: User){
+    public onOffer(targetId: string, meetingId: string, sdp: any, user: User) {
         const room = this.meetingRoom.get(meetingId);
         if (!room) return;
 
-        this.broadcast({ type: "offer", payload: { meetingId: meetingId, sdp }},user,meetingId)
-    }
-
-    public onAnswer(meetingId: string, sdp: any, user:User){
-        if(!meetingId || !sdp || !user) return;
-
-        const room = this.meetingRoom.get(meetingId)
-
-        if(!room) return;
-
-        const message = {
-            type: "answer", 
-            payload : {
-                meetingId,
-                sdp
+        this.meetingRoom.get(meetingId)?.forEach(u => {
+            if (targetId === u.userId) {
+                u.ws.send(
+                    JSON.stringify({
+                        type: "offer",
+                        payload: {
+                            meetingId: meetingId,
+                            sdp,
+                            senderId: user.userId
+                        }
+                    })
+                )
             }
-        }
-        this.broadcast(message,user,meetingId)
+        })
     }
 
-    public onIceCandidate(meetingId: string, candidate: any, type: string, user: User) {
-        console.log("inside onicecandidate")
+    public onAnswer(targetId: string, meetingId: string, sdp: any, user: User) {
+        const targetUser = this.meetingRoom.get(meetingId)?.find(u => u.userId === targetId);
+        if (targetUser) {
+            targetUser.ws.send(JSON.stringify({
+                type: "answer",
+                payload: {
+                    sdp,
+                    senderId: user.userId
+                }
+            }));
+        }
+    }
+
+
+    public onIceCandidate(targetId: string, meetingId: string, candidate: any, type: string, user: User) {
         const room = this.meetingRoom.get(meetingId);
         if (!room || !user) return;
-        
-        const message = {
-            type: "add-ice-candidate",
-            payload: {
-                candidate,
-                type
-            }
-        };
 
-        this.broadcast(message, user, meetingId);
+        const targetUser = room.find(u => u.userId === targetId);
+        if (targetUser) {
+            targetUser.ws.send(JSON.stringify({
+                type: "add-ice-candidate",
+                payload: {
+                    candidate,
+                    type,
+                    senderId: user.userId
+                }
+            }));
+        }
     }
 
     public removeUser(meetingId: string, userId: string) {
-        if (!this.meetingRoom.has(meetingId)) return
+        const room = this.meetingRoom.get(meetingId);
+        if (room) {
+            this.meetingRoom.set(meetingId, room.filter(u => u.id !== userId));
+        }
+    }
 
-        this.meetingRoom.set(meetingId, this.meetingRoom.get(meetingId)?.filter(u => u.id !== userId)!)
+    public handleUserLeftMeeting(meetingId: string, user: User) {
+        this.removeUser(meetingId, user.id);
+        
+        this.meetingRoom.get(meetingId)?.forEach((u) => {
+            u.ws.send(JSON.stringify({
+                type: "user-left-meeting",
+                payload: {
+                    userId: user.userId
+                }
+            }));
+        });
     }
 
 }

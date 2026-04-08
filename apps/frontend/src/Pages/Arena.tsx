@@ -10,26 +10,25 @@ const configuration = {
   ]
 };
 
-
-
 export const Arena = () => {
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({});
   const [users, setUsers] = useState(new Map());
-  const [params, setParams] = useState({ token: '', spaceId: '' });
   const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
-  const [message, setMessage] = useState<string>()
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
   const [isinsideRoom, setisinsideRoom] = useState<boolean>(false)
-  const remoteVideoRef = useRef(null);
-  const sendingPcRef: any = useRef(null);
-  const receivingPcRef: any = useRef(null);
+  const peerRef = useRef(new Map<string, RTCPeerConnection>())
   const localVideoRef: any = useRef(null);
-  const remoteStreamRef = useRef<MediaStream | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStreams, setRemoteStreams] = useState(new Map<string, MediaStream>())
+  const pendingCandidates = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const localVideoTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
+  const localAudioTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
+  const onMessageRef = useRef<any>(null);
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -38,10 +37,6 @@ export const Arena = () => {
     { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
-
-  function popUp(message: string, type: string) {
-    return message;
-  }
 
   const furniture: Furniture[] = [
     {
@@ -76,28 +71,62 @@ export const Arena = () => {
     }
   ];
 
+  const cleanupConnection = () => {
+    peerRef.current.forEach(pc => pc.close());
+    peerRef.current.clear();
+    pendingCandidates.current.clear();
+    setRemoteStreams(new Map());
+
+    const stream = localStreamRef.current || localStream;
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        track.stop();
+      });
+    }
+
+    localVideoTrackRef.current?.stop();
+    localAudioTrackRef.current?.stop();
+    localVideoTrack?.stop();
+    localAudioTrack?.stop();
+
+    localStreamRef.current = null;
+    localVideoTrackRef.current = undefined;
+    localAudioTrackRef.current = undefined;
+    setLocalStream(null);
+    setLocalVideoTrack(undefined);
+    setLocalAudioTrack(undefined);
+
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+  };
+
   async function getAccess() {
+    if (localStreamRef.current && localStreamRef.current.active) {
+      return localStreamRef.current;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: true
       });
 
-      setLocalStream(stream);
-      setLocalVideoTrack(stream.getVideoTracks()[0]);
-      setLocalAudioTrack(stream.getAudioTracks()[0]);
+      const videoTrack = stream.getVideoTracks()[0];
+      const audioTrack = stream.getAudioTracks()[0];
 
-      console.log("✅ media ready");
+      localStreamRef.current = stream;
+      localVideoTrackRef.current = videoTrack;
+      localAudioTrackRef.current = audioTrack;
+
+      setLocalStream(stream);
+      setLocalVideoTrack(videoTrack);
+      setLocalAudioTrack(audioTrack);
 
       return stream
     } catch (err) {
-      console.error("❌ getUserMedia failed", err);
     }
   }
-
-  useEffect(() => {
-    getAccess()
-  }, [isinsideRoom])
 
   async function checkNearChair(x: any, y: any) {
     chairCordinates.forEach((e: any) => {
@@ -117,20 +146,22 @@ export const Arena = () => {
 
       validCordinates.forEach((c) => {
         if (c.x == x && c.y == y) {
-          // console.log("near chair", e.chairId)
-          setMessage(popUp(`click cmd+I to sit in chair`, "hello"))
           setCurrentUser((prev: any) => ({
             ...prev,
-            message: popUp(`cmd+I to sit in chair`, "hello")
+            message: `cmd+I to sit in chair`
           }))
           setPossibleChairToSit(e.chairId)
         } else {
           if (possibleChairToSit != 0) {
             setPossibleChairToSit(0)
           }
-          if (currentUser.message) {
-            delete currentUser.message
-          }
+          setCurrentUser((prev: any) => {
+            if (prev.message) {
+              const { message, ...rest } = prev;
+              return rest;
+            }
+            return prev;
+          })
         }
       })
 
@@ -142,7 +173,11 @@ export const Arena = () => {
       x >= room.minX && x <= room.maxX && y >= room.minY && y <= room.maxY
     );
 
-    setisinsideRoom(inside);
+
+    if (!inside && localStreamRef.current) {
+      cleanupConnection();
+    }
+
     return inside;
   }
 
@@ -150,7 +185,6 @@ export const Arena = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
-    setParams({ token, spaceId });
 
     wsRef.current = new WebSocket('ws://localhost:8080/');
 
@@ -166,39 +200,40 @@ export const Arena = () => {
 
     wsRef.current.onmessage = (event: any) => {
       const message = JSON.parse(event.data);
-      handleWebSocketMessage(message);
+      onMessageRef.current?.(message);
     };
 
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
       }
+      cleanupConnection();
     };
   }, []);
 
-  async function sendOffer() {
-    console.log("inside function");
+  async function sendOffer(i: string) {
+    if (peerRef.current.has(i)) {
+      const existing = peerRef.current.get(i);
+      if (existing?.signalingState !== 'closed') return;
+    }
 
-    let stream: any = null;
-    if (!localVideoTrack || !localAudioTrack) {
+    let stream: any = localStreamRef.current;
+    if (!stream) {
       stream = await getAccess();
     }
 
-    if (!stream && (!localVideoTrack || !localAudioTrack)) {
+    if (!stream) {
       return;
     }
 
     const pc = new RTCPeerConnection(configuration);
-    sendingPcRef.current = pc;
+    peerRef.current.set(i, pc);
 
-    if (stream) {
-      stream.getTracks().forEach((track: any) => {
-        pc.addTrack(track, stream!);
-      });
-    } else {
-      if (localVideoTrack) pc.addTrack(localVideoTrack);
-      if (localAudioTrack) pc.addTrack(localAudioTrack);
-    }
+    const vTrack = stream.getVideoTracks()[0];
+    const aTrack = stream.getAudioTracks()[0];
+
+    if (vTrack) pc.addTrack(vTrack, stream);
+    if (aTrack) pc.addTrack(aTrack, stream);
 
     pc.onicecandidate = (e) => {
       if (!e.candidate) return;
@@ -206,99 +241,80 @@ export const Arena = () => {
       wsRef.current?.send(JSON.stringify({
         type: "add-ice-candidate",
         payload: {
+          targetId: i,
           meetingId: "meetingRoom1",
-          type: "sender",
           candidate: e.candidate
         }
       }));
     };
 
-    let remoteStream: MediaStream | null = null;
-
     pc.ontrack = (event) => {
-      console.log("event", event)
-
-      const videoEl = remoteVideoRef.current as HTMLVideoElement | null;
-      if (!videoEl) return;
-
-      if (!remoteStream) {
-        remoteStream = new MediaStream();
-        videoEl.srcObject = remoteStream;
-
-        videoEl.muted = true;
-
-        videoEl.onloadedmetadata = () => {
-          videoEl.play()
-            .then(() => console.log("✅ SENDER REMOTE VIDEO PLAYING"))
-            .catch(err => console.log("❌ SENDER REMOTE PLAY FAILED", err));
-        };
-      }
-
-      remoteStream.addTrack(event.track);
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        const existingStream = next.get(i) || new MediaStream();
+        if (!existingStream.getTracks().find(t => t.id === event.track.id)) {
+          existingStream.addTrack(event.track);
+        }
+        next.set(i, existingStream);
+        return next;
+      });
     };
 
     try {
-      console.log("Creating offer...");
-      const offer = await pc.createOffer();
 
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      console.log("Local description set ✅");
+
 
       wsRef.current?.send(JSON.stringify({
         type: "offer",
         payload: {
+          targetId: i,
           meetingId: "meetingRoom1",
           sdp: offer
         }
       }));
 
     } catch (err) {
-      console.error("❌ OFFER ERROR", err);
+
     }
   }
 
   async function receiveOffer(message: any) {
-    console.log("inside offer", message.payload);
+    const senderId = message.payload.senderId;
 
-    let currentStream: MediaStream | null = localStream;
-    if (!localVideoTrack || !localAudioTrack) {
+    let currentStream: MediaStream | null = localStreamRef.current;
+    if (!currentStream) {
       currentStream = await getAccess() as MediaStream;
     }
 
-    remoteStreamRef.current = null;
+    if (peerRef.current.has(senderId)) {
+      const existing = peerRef.current.get(senderId);
+      if (existing?.signalingState !== 'closed') return;
+    }
 
     const pc = new RTCPeerConnection(configuration);
-    receivingPcRef.current = pc;
+    peerRef.current.set(senderId, pc);
 
     if (currentStream) {
-      currentStream.getTracks().forEach(track => {
-        pc.addTrack(track, currentStream!);
-      });
-    } else {
-      if (localVideoTrack) pc.addTrack(localVideoTrack);
-      if (localAudioTrack) pc.addTrack(localAudioTrack);
+      const vTrack = currentStream.getVideoTracks()[0];
+      const aTrack = currentStream.getAudioTracks()[0];
+      if (vTrack) pc.addTrack(vTrack, currentStream);
+      if (aTrack) pc.addTrack(aTrack, currentStream);
     }
 
     pc.ontrack = (event) => {
-      console.log("TRACK RECEIVED:", event.track.kind);
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        const existingStream = next.get(senderId) || new MediaStream();
 
-      const videoEl = remoteVideoRef.current as HTMLVideoElement | null;
-      if (!videoEl) return;
+        if (!existingStream.getTracks().find(t => t.id === event.track.id)) {
+          existingStream.addTrack(event.track);
+        }
 
-      if (!remoteStreamRef.current) {
-        remoteStreamRef.current = new MediaStream();
-
-        videoEl.srcObject = remoteStreamRef.current;
-        // videoEl.muted = true; // Still muted for now to avoid feedback
-
-        videoEl.onloadedmetadata = () => {
-          videoEl.play()
-            .then(() => console.log("✅ REMOTE VIDEO PLAYING"))
-            .catch(err => console.log("❌ REMOTE PLAY FAILED", err));
-        };
-      }
-
-      remoteStreamRef.current.addTrack(event.track);
+        next.set(senderId, existingStream);
+        return next;
+      });
     };
 
     pc.onicecandidate = (e) => {
@@ -307,18 +323,21 @@ export const Arena = () => {
       wsRef.current?.send(JSON.stringify({
         type: "add-ice-candidate",
         payload: {
-          meetingId: "meetingRoom1", // ✅ FIXED
-          type: "receiver",
+          meetingId: "meetingRoom1",
+          targetId: senderId,
           candidate: e.candidate
         }
       }));
     };
 
-    pc.oniceconnectionstatechange = () => {
-      console.log("RECEIVER ICE STATE:", pc.iceConnectionState);
-    };
-
     await pc.setRemoteDescription(message.payload.sdp);
+
+    // Process queued candidates
+    const queued = pendingCandidates.current.get(senderId) || [];
+    while (queued.length > 0) {
+      const candidate = queued.shift();
+      if (candidate) pc.addIceCandidate(candidate);
+    }
 
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
@@ -326,23 +345,30 @@ export const Arena = () => {
     wsRef.current?.send(JSON.stringify({
       type: "answer",
       payload: {
-        meetingId: "meetingRoom1", // ✅ FIXED
+        meetingId: "meetingRoom1",
+        targetId: senderId,
         sdp: answer
       }
     }));
-
   }
 
-  async function onAnswerReceive(sdp: any) {
-    const pc = sendingPcRef.current;
-    if (!pc) return;
-    await pc.setRemoteDescription(sdp);
+  async function onAnswerReceive(message: any) {
+    const senderId = message.payload.senderId;
+    const pc = peerRef.current.get(senderId);
+    if (!pc || pc.signalingState === 'stable') return;
+    await pc.setRemoteDescription(message.payload.sdp);
+
+    // Process queued candidates
+    const queued = pendingCandidates.current.get(senderId) || [];
+    while (queued.length > 0) {
+      const candidate = queued.shift();
+      if (candidate) pc.addIceCandidate(candidate)
+    }
   }
 
   const handleWebSocketMessage = async (message: any) => {
     switch (message.type) {
       case 'space-joined':
-
         setCurrentUser({
           x: message.payload.spawn.x,
           y: message.payload.spawn.y,
@@ -392,51 +418,81 @@ export const Arena = () => {
         break;
 
       case 'user-left':
+        const leftUserId = message.payload.id;
         setUsers(prev => {
           const newUsers = new Map(prev);
-          newUsers.delete(message.payload.id);
+          newUsers.delete(leftUserId);
           return newUsers;
         });
+        // Cleanup WebRTC if user left completely
+        cleanupPeerConnection(leftUserId);
         break;
 
-      case "send-offer":
-        await sendOffer()
+      case 'user-left-meeting':
+        // Cleanup WebRTC when user leaves meeting area
+        cleanupPeerConnection(message.payload.userId);
         break;
 
       case "offer":
-        alert("offer recieved")
         await receiveOffer(message)
         break;
 
       case "answer":
-        await onAnswerReceive(message.payload.sdp)
+        await onAnswerReceive(message)
         break;
 
-
       case "add-ice-candidate":
-        const { candidate, type } = message.payload;
+        const { candidate, senderId: iceSenderId } = message.payload;
 
-        if (!candidate) return;
+        if (!candidate || !iceSenderId) return;
 
         try {
-          if (type === "sender") {
-            receivingPcRef.current?.addIceCandidate(candidate);
+          const pc = peerRef.current.get(iceSenderId);
+          if (pc && pc.remoteDescription) {
+            await pc.addIceCandidate(candidate);
           } else {
-            sendingPcRef.current?.addIceCandidate(candidate);
+            if (!pendingCandidates.current.has(iceSenderId)) {
+              pendingCandidates.current.set(iceSenderId, []);
+            }
+            pendingCandidates.current.get(iceSenderId)!.push(candidate);
           }
         } catch (err) {
-          console.error("ICE error", err);
+
         }
         break;
 
+      case "init-call":
+        const id = message.payload.id;
+        const ids = id.filter((e: string) => e !== currentUser?.userId);
+        ids.forEach((i: string) => {
+          sendOffer(i)
+        })
+        break;
+
     }
+  };
+
+  // Update the message handler ref every render to keep it fresh
+  onMessageRef.current = handleWebSocketMessage;
+
+  const cleanupPeerConnection = (userId: string) => {
+    const pc = peerRef.current.get(userId);
+    if (pc) {
+      pc.close();
+      peerRef.current.delete(userId);
+    }
+    pendingCandidates.current.delete(userId);
+    setRemoteStreams((prev) => {
+      const next = new Map(prev);
+      next.delete(userId);
+      return next;
+    });
   };
 
   const handleMove = (newX: any, newY: any) => {
     if (!currentUser) return;
     checkNearChair(newX, newY)
     const inside = CheckisinsideRoom(newX, newY)
-    // console.log("isinsideRoom",inside)
     wsRef.current.send(JSON.stringify({
       type: 'move',
       payload: {
@@ -500,7 +556,7 @@ export const Arena = () => {
         const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
         const id = chair.chairId
         const direction: boolean = chair.rotate == 0 ? true : false
-        setChairCordinates((prev) => {
+        setChairCordinates((prev: any) => {
           const newX = Math.floor(cx / CELL_SIZE) + 1;
           const newY = Math.floor(cy / CELL_SIZE) + 1;
 
@@ -586,7 +642,6 @@ export const Arena = () => {
     if (!currentUser) return;
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
-      // console.log("button pressed")
       if (possibleChairToSit) {
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
@@ -596,13 +651,10 @@ export const Arena = () => {
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
-            // console.log("sitting in chair", possibleChairToSit, "in sit :", x, y)
-            setCurrentUser({ x, y })
+            setCurrentUser(prev => ({ ...prev, x, y }))
             handleMove(x, y)
           }
         })
-      } else {
-
       }
     }
 
@@ -647,9 +699,7 @@ export const Arena = () => {
   };
 
   useEffect(() => {
-    // console.log("inside")
     if (localVideoRef.current && localVideoTrack) {
-      // console.log("insdie usereffect")
       const stream = new MediaStream([localVideoTrack]);
       localVideoRef.current.srcObject = stream;
       localVideoRef.current.play().catch(() => { });
@@ -658,18 +708,40 @@ export const Arena = () => {
 
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
-      <h1>{JSON.stringify(message)}</h1>
-      <h1>current user{JSON.stringify(currentUser)}</h1>
-      <h1>user:{users.size}</h1>
-      <h1>Token:{JSON.stringify(params.token)}</h1>
-      <h1>spaceID:{JSON.stringify(params.spaceId)}</h1>
-      <video
-        ref={localVideoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-40 h-30 object-cover"
-      />
+      <h1>{JSON.stringify(currentUser.userId)}</h1>
+      <div className="flex gap-7 mt-4">
+        <div className='relative'>
+
+          <p className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1">{currentUser.userId}</p>
+          <video
+            ref={(el) => {
+                  localVideoRef.current = el;
+                  if (el) el.srcObject = localStream;
+                }}
+            autoPlay
+            playsInline
+            muted
+            className="w-40 h-32 bg-black object-cover rounded-lg"
+          />
+        </div>
+
+        <div className=" flex flex-wrap  gap-7 ">
+          {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
+            <div key={userId} className="relative">
+              <p className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1">{userId}</p>
+              <video
+                autoPlay
+                playsInline
+                muted
+                ref={(el) => {
+                  if (el) el.srcObject = stream;
+                }}
+                className="w-40 h-32 bg-black object-cover rounded-lg"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="border m-3 overflow-scrollrounded-lg">
         <canvas
           ref={canvasRef}
@@ -678,13 +750,6 @@ export const Arena = () => {
       </div>
       <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
 
-      <video
-        ref={remoteVideoRef}
-        autoPlay
-        playsInline
-        muted
-        className="w-30 h-30 object-cover"
-      />
     </div>
   );
 };

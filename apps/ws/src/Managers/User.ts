@@ -1,5 +1,4 @@
 import type WebSocket from "ws";
-
 import { RoomManager } from "./RoomManagers.js";
 import jwt from 'jsonwebtoken';
 import { JWT_PASSWORD } from "../config.js";
@@ -103,11 +102,11 @@ export class User {
                         );
                          if(parsedData.payload.isinsideRoom){
                             MeetingRoomManager.getInstance().addUser("meetingRoom1", this)
+                        } else {
+                            MeetingRoomManager.getInstance().handleUserLeftMeeting("meetingRoom1", this)
                         }
-                        // return;
                     }
                     else {
-                        // console.log("move is not correct");
                         this.ws.send(JSON.stringify({
                             type: "movement-rejected",
                             payload: {
@@ -121,6 +120,7 @@ export class User {
                 case "add-ice-candidate":
                     console.log("PARSED DATA", parsedData)
                     MeetingRoomManager.getInstance().onIceCandidate(
+                        parsedData.payload.targetId,
                         parsedData.payload.meetingId,
                         parsedData.payload.candidate,
                         parsedData.payload.type,
@@ -129,11 +129,15 @@ export class User {
                     break;
 
                 case "offer":
-                    MeetingRoomManager.getInstance().onOffer(parsedData.payload.meetingId,parsedData.payload.sdp,this);
+                    MeetingRoomManager.getInstance().onOffer(
+                        parsedData.payload.targetId,
+                        parsedData.payload.meetingId,
+                        parsedData.payload.sdp,
+                        this);
                     break;  
 
                 case "answer":
-                    MeetingRoomManager.getInstance().onAnswer(parsedData.payload.meetingId, parsedData.payload.sdp, this)
+                    MeetingRoomManager.getInstance().onAnswer(parsedData.payload.targetId,parsedData.payload.meetingId, parsedData.payload.sdp, this)
                 break;  
             }
         });
@@ -151,10 +155,7 @@ export class User {
             this.spaceId!
         )
         RoomManager.getInstance().removeUser(this.spaceId!, this.userId!)
-    }
-
-    send() {
-
+        MeetingRoomManager.getInstance().handleUserLeftMeeting("meetingRoom1", this)
     }
 
 
