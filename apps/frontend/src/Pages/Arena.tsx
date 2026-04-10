@@ -11,15 +11,15 @@ const configuration = {
 };
 
 export const Arena = () => {
+  const [loading, setLoading] = useState<boolean>(false)
   const canvasRef = useRef<any>(null);
   const wsRef = useRef<any>(null);
-  const [currentUser, setCurrentUser] = useState<any>({});
+  const [currentUser, setCurrentUser] = useState<any>({} as any);
   const [users, setUsers] = useState(new Map());
-  const [chairCordinates, setChairCordinates] = useState<object[]>([])
+  // const [chairCordinates, setChairCordinates] = useState<object[]>([])
   const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
-  const [isSitting, setIsSitting] = useState<boolean>(false)
   const peerRef = useRef(new Map<string, RTCPeerConnection>())
   const localVideoRef: any = useRef(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -29,6 +29,9 @@ export const Arena = () => {
   const localVideoTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
   const localAudioTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
   const onMessageRef = useRef<any>(null);
+  // const [ontheChair, setOntheChair] = useState<boolean>(false)
+  const [message, setMessage] = useState<string>("go near chair")
+  const [validCordinates, setValidCordinates] = useState<any>(null as any)
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -37,6 +40,89 @@ export const Arena = () => {
     { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
+
+  function getValidPoints() {
+    
+  }
+
+  useEffect(() => {
+    console.log("insdie useeffect 1 ")
+    if (furniture) {
+      console.log('funniture is there')
+      let chairCoordinates : object[] = [];
+      furniture.forEach((item) => {
+        const px = item.x * CELL_SIZE;
+        const py = item.y * CELL_SIZE;
+        item.chairs.forEach((chair: any) => {
+          const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
+          const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
+          const id = chair.chairId
+          const direction: boolean = chair.rotate == 0 ? true : false
+          const newX = Math.floor(cx / CELL_SIZE) + 1;
+          const newY = Math.floor(cy / CELL_SIZE) + 1;
+          const cordinate: object = { x: newX, y: newY, chairId: id, direction }
+          chairCoordinates.push(cordinate)
+        });
+        getValidPoints()
+      })
+      console.log(chairCoordinates)
+      chairCoordinates.forEach((item) => {
+      const e: any = item
+      const Cordinates: any = e.direction ? [
+            { x: e.x - 1, y: e.y - 1 },
+            { x: e.x + 1, y: e.y - 1 },
+            { x: e.x - 1, y: e.y },
+            { x: e.x, y: e.y - 1 },
+            { x: e.x + 1, y: e.y },
+          ] : [
+            { x: e.x - 1, y: e.y + 1 },
+            { x: e.x - 1, y: e.y },
+            { x: e.x + 1, y: e.y + 1 },
+            { x: e.x, y: e.y + 1 },
+            { x: e.x + 1, y: e.y },
+          ]
+          console.log('cordinate',typeof Cordinates)
+          //TODO: cordinates are not stored in sevalidcordinates
+          // Cordinates.forEach((c: any)=>{    
+            setValidCordinates((prev : any) => ({
+              ...prev,
+              Cordinates
+            })) 
+          // })
+      })
+    }
+
+    setLoading(true)
+    console.log("insdie useeffect 1")
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token') || '';
+    const spaceId = urlParams.get('spaceId') || '';
+
+    wsRef.current = new WebSocket('ws://localhost:8080/');
+
+    wsRef.current.onopen = () => {
+      wsRef.current.send(JSON.stringify({
+        type: 'join',
+        payload: {
+          spaceId,
+          token
+        }
+      }));
+    };
+
+    setLoading(false)
+    wsRef.current.onmessage = (event: any) => {
+      const message = JSON.parse(event.data);
+      onMessageRef.current?.(message);
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      cleanupConnection();
+    };
+  }, []);
 
   const furniture: Furniture[] = [
     {
@@ -129,50 +215,31 @@ export const Arena = () => {
   }
 
   async function checkNearChair(x: any, y: any) {
-    console.log("inside checknearchair")
-
-    let validCordinates: Array<object> = [];
-    chairCordinates.forEach((e: any) => {
-      validCordinates = e.direction ? [
-        { x: e.x - 1, y: e.y - 1 },
-        { x: e.x + 1, y: e.y - 1 },
-        { x: e.x - 1, y: e.y },
-        { x: e.x, y: e.y - 1 },
-        { x: e.x + 1, y: e.y },
-      ] : [
-        { x: e.x - 1, y: e.y + 1 },
-        { x: e.x - 1, y: e.y },
-        { x: e.x + 1, y: e.y + 1 },
-        { x: e.x, y: e.y + 1 },
-        { x: e.x + 1, y: e.y },
-      ]
-
-      validCordinates.forEach((c: any) => {
-        if (c.x == x && c.y == y) {
-          console.log("near chair")
-          console.log(currentUser)
-          setCurrentUser((prev: any) => ({
-            ...prev,
-            message: `cmd+I to sit in chair`
-          }))
-          console.log(currentUser)
-          setPossibleChairToSit(e.chairId)
-        } else {
-          if (possibleChairToSit != 0) {
-            setPossibleChairToSit(0)
-          }
-          setCurrentUser((prev: any) => {
-            if (prev.message) {
-              const { message, ...rest } = prev;
-              return rest;
-            }
-            return prev;
-          })
+    console.log("inside checknearchair",)
+    validCordinates.forEach((c: any) => {
+      if (c.x == x && c.y == y) {
+        setMessage("cmd+I to sit in chair")
+        setCurrentUser((prev: any) => ({
+          ...prev,
+          message: "cmd+I to sit in chair"
+        }))
+        console.log('currentUser', currentUser)
+        console.log(currentUser)
+        // setPossibleChairToSit(e.chairId)
+      } else {
+        if (possibleChairToSit != 0) {
+          setPossibleChairToSit(0)
         }
-      })
-
-    })
-
+        setCurrentUser((prev: any) => {
+          if (prev.message) {
+            const { message, ...rest } = prev;
+            return rest;
+          }
+          return prev;
+        })
+      }
+    }
+    )
   }
 
   function CheckisinsideRoom(x: any, y: any) {
@@ -187,36 +254,6 @@ export const Arena = () => {
 
     return inside;
   }
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token') || '';
-    const spaceId = urlParams.get('spaceId') || '';
-
-    wsRef.current = new WebSocket('ws://localhost:8080/');
-
-    wsRef.current.onopen = () => {
-      wsRef.current.send(JSON.stringify({
-        type: 'join',
-        payload: {
-          spaceId,
-          token
-        }
-      }));
-    };
-
-    wsRef.current.onmessage = (event: any) => {
-      const message = JSON.parse(event.data);
-      onMessageRef.current?.(message);
-    };
-
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      cleanupConnection();
-    };
-  }, []);
 
   async function sendOffer(i: string) {
     if (peerRef.current.has(i)) {
@@ -375,6 +412,7 @@ export const Arena = () => {
 
   const handleWebSocketMessage = async (message: any) => {
     switch (message.type) {
+
       case 'space-joined':
         setCurrentUser({
           x: message.payload.spawn.x,
@@ -431,7 +469,6 @@ export const Arena = () => {
           newUsers.delete(leftUserId);
           return newUsers;
         });
-        // Cleanup WebRTC if user left completely
         cleanupPeerConnection(leftUserId);
         break;
 
@@ -495,11 +532,23 @@ export const Arena = () => {
     });
   };
 
-  const handleMove = (newX: any, newY: any) => {
+  const handleMove = (newX: any, newY: any, isSitting: boolean) => {
     console.log("inside handle move ")
     if (!currentUser) return;
+    const isInsideRoom = CheckisinsideRoom(newX, newY)
     checkNearChair(newX, newY)
-    getAccess()
+    isInsideRoom && getAccess()
+    console.log(isSitting)
+    console.log("isinroom", isInsideRoom)
+    wsRef.current.send(JSON.stringify({
+      type: 'move',
+      payload: {
+        x: newX,
+        y: newY,
+        userId: currentUser.userId,
+        isinsideRoom: isSitting,
+      }
+    }));
 
   };
 
@@ -553,17 +602,6 @@ export const Arena = () => {
       item.chairs.forEach(chair => {
         const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2
-        const id = chair.chairId
-        const direction: boolean = chair.rotate == 0 ? true : false
-        setChairCordinates((prev: any) => {
-          const newX = Math.floor(cx / CELL_SIZE) + 1;
-          const newY = Math.floor(cy / CELL_SIZE) + 1;
-
-          const exists = prev.some((c: any) => c.x === newX && c.y === newY);
-          if (exists) return prev;
-
-          return [...prev, { x: newX, y: newY, chairId: id, direction }];
-        });
         drawChair(ctx, cx, cy);
       });
 
@@ -618,7 +656,7 @@ export const Arena = () => {
       ctx.fillStyle = '#000';
       ctx.font = '14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(`${currentUser.x}-${currentUser.y} ${currentUser.message ? `${currentUser.message}` : ""}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
+      ctx.fillText(`${currentUser.x}-${currentUser.y} ${message}`, currentUser.x * CELL_SIZE, currentUser.y * CELL_SIZE + 40);
     }
 
     users.forEach(user => {
@@ -642,7 +680,6 @@ export const Arena = () => {
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (possibleChairToSit) {
-        console.log("key pressed")
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
             const px = 2 * CELL_SIZE;
@@ -651,21 +688,12 @@ export const Arena = () => {
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
-            console.log("chaid x y", x, y)
             setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
-            handleMove(x, y)
+            handleMove(x, y, true)
+
           }
         })
-        const inside = CheckisinsideRoom(currentUser.x, currentUser.y)
-        wsRef.current.send(JSON.stringify({
-          type: 'move',
-          payload: {
-            x: currentUser.x,
-            y: currentUser.y,
-            userId: currentUser.userId,
-            isinsideRoom: inside,
-          }
-        }));
+
       }
     }
 
@@ -674,7 +702,7 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y - 1;
-          handleMove(prev.x, newY);
+          handleMove(prev.x, newY, false);
           return { ...prev, y: newY };
         });
         break;
@@ -683,7 +711,7 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y + 1;
-          handleMove(prev.x, newY);
+          handleMove(prev.x, newY, false);
           return { ...prev, y: newY };
         });
         break;
@@ -692,7 +720,7 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x - 1;
-          handleMove(newX, prev.y);
+          handleMove(newX, prev.y, false);
           return { ...prev, x: newX };
         });
         break;
@@ -701,7 +729,7 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x + 1;
-          handleMove(newX, prev.y);
+          handleMove(newX, prev.y, false);
           return { ...prev, x: newX };
         });
         break;
@@ -716,10 +744,12 @@ export const Arena = () => {
     }
   }, [localVideoTrack]);
 
+
   return (
     <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
-      <h1>{JSON.stringify(currentUser)}</h1>
-      <h1>{JSON.stringify(possibleChairToSit)}</h1>
+      <h1>{JSON.stringify(loading)}</h1>
+      <h1>message={JSON.stringify(message)}</h1>
+      <h1>coordinates={JSON.stringify(validCordinates)}</h1>
 
       <div className="flex gap-7 mt-4">
         <div className='relative'>
@@ -755,7 +785,6 @@ export const Arena = () => {
           ))}
         </div>
       </div>
-      <h1>{JSON.stringify(chairCordinates)}</h1>
       <div className="border m-3 overflow-scrollrounded-lg">
         <canvas
           ref={canvasRef}

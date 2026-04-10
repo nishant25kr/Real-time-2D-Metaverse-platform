@@ -80,6 +80,7 @@ export class User {
                     break;
 
                 case "move":
+                    console.log('parsedData',parsedData)
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX);
@@ -138,7 +139,11 @@ export class User {
 
                 case "answer":
                     MeetingRoomManager.getInstance().onAnswer(parsedData.payload.targetId,parsedData.payload.meetingId, parsedData.payload.sdp, this)
-                break;  
+                break;
+                
+                case "user-left":
+                    this.destroy();
+                    break;
             }
         });
     }

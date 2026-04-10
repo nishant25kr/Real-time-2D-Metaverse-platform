@@ -26,5 +26,28 @@ export interface DynamicComponentProps {
   text: string;
 }
 
+interface User{
+  userId:string,
+  // message: string,
+  x:number,
+  y:number
+}
+
+interface spawn {
+x: number,
+  y: number,
+}
+
+interface Payload {
+  spawn:spawn
+  id: string,
+}
+
+interface IncomingMessage{
+  type: string,
+  payload: Payload
+
+}
+
 
 
