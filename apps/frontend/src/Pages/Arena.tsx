@@ -29,9 +29,11 @@ export const Arena = () => {
   const localVideoTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
   const localAudioTrackRef = useRef<MediaStreamTrack | undefined>(undefined);
   const onMessageRef = useRef<any>(null);
-  // const [ontheChair, setOntheChair] = useState<boolean>(false)
+  const [ontheChair, setOntheChair] = useState<boolean>(false)
   const [message, setMessage] = useState<string>("go near chair")
   const [validCordinates, setValidCordinates] = useState<any>(null as any)
+  const [lastcordinate, setLastcordinates] = useState<any>({})
+  const [InsideRoom, setInsideRoom] = useState<boolean>(false)
 
   const rooms = [
     { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
@@ -41,15 +43,10 @@ export const Arena = () => {
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
 
-  function getValidPoints() {
-    
-  }
-
   useEffect(() => {
-    console.log("insdie useeffect 1 ")
+    setLoading(true)
     if (furniture) {
-      console.log('funniture is there')
-      let chairCoordinates : object[] = [];
+      let chairCoordinates: object[] = [];
       furniture.forEach((item) => {
         const px = item.x * CELL_SIZE;
         const py = item.y * CELL_SIZE;
@@ -63,37 +60,31 @@ export const Arena = () => {
           const cordinate: object = { x: newX, y: newY, chairId: id, direction }
           chairCoordinates.push(cordinate)
         });
-        getValidPoints()
       })
-      console.log(chairCoordinates)
+
+      let ctoset: object[] = [];
       chairCoordinates.forEach((item) => {
-      const e: any = item
-      const Cordinates: any = e.direction ? [
-            { x: e.x - 1, y: e.y - 1 },
-            { x: e.x + 1, y: e.y - 1 },
-            { x: e.x - 1, y: e.y },
-            { x: e.x, y: e.y - 1 },
-            { x: e.x + 1, y: e.y },
-          ] : [
-            { x: e.x - 1, y: e.y + 1 },
-            { x: e.x - 1, y: e.y },
-            { x: e.x + 1, y: e.y + 1 },
-            { x: e.x, y: e.y + 1 },
-            { x: e.x + 1, y: e.y },
-          ]
-          console.log('cordinate',typeof Cordinates)
-          //TODO: cordinates are not stored in sevalidcordinates
-          // Cordinates.forEach((c: any)=>{    
-            setValidCordinates((prev : any) => ({
-              ...prev,
-              Cordinates
-            })) 
-          // })
+        const e: any = item
+        const Cordinates: any = e.direction ? [
+          { x: e.x - 1, y: e.y - 1, id: e.chairId },
+          { x: e.x + 1, y: e.y - 1, id: e.chairId },
+          { x: e.x - 1, y: e.y, id: e.chairId },
+          { x: e.x, y: e.y - 1, id: e.chairId },
+          { x: e.x + 1, y: e.y, id: e.chairId },
+        ] : [
+          { x: e.x - 1, y: e.y + 1, id: e.chairId },
+          { x: e.x - 1, y: e.y, id: e.chairId },
+          { x: e.x + 1, y: e.y + 1, id: e.chairId },
+          { x: e.x, y: e.y + 1, id: e.chairId },
+          { x: e.x + 1, y: e.y, id: e.chairId },
+        ]
+        Cordinates.forEach((c: any) => {
+          ctoset.push(c)
+        })
       })
+      setValidCordinates(ctoset)
     }
 
-    setLoading(true)
-    console.log("insdie useeffect 1")
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
@@ -215,18 +206,13 @@ export const Arena = () => {
   }
 
   async function checkNearChair(x: any, y: any) {
-    console.log("inside checknearchair",)
     validCordinates.forEach((c: any) => {
       if (c.x == x && c.y == y) {
         setMessage("cmd+I to sit in chair")
-        setCurrentUser((prev: any) => ({
-          ...prev,
-          message: "cmd+I to sit in chair"
-        }))
-        console.log('currentUser', currentUser)
-        console.log(currentUser)
-        // setPossibleChairToSit(e.chairId)
+        setPossibleChairToSit(c.id)
+
       } else {
+        setMessage("go near chair")
         if (possibleChairToSit != 0) {
           setPossibleChairToSit(0)
         }
@@ -246,7 +232,7 @@ export const Arena = () => {
     const inside = rooms.some(room =>
       x >= room.minX && x <= room.maxX && y >= room.minY && y <= room.maxY
     );
-
+    setInsideRoom(inside)
 
     if (!inside && localStreamRef.current) {
       cleanupConnection();
@@ -538,8 +524,8 @@ export const Arena = () => {
     const isInsideRoom = CheckisinsideRoom(newX, newY)
     checkNearChair(newX, newY)
     isInsideRoom && getAccess()
-    console.log(isSitting)
-    console.log("isinroom", isInsideRoom)
+    !isInsideRoom && cleanupConnection()
+
     wsRef.current.send(JSON.stringify({
       type: 'move',
       payload: {
@@ -549,7 +535,6 @@ export const Arena = () => {
         isinsideRoom: isSitting,
       }
     }));
-
   };
 
   useEffect(() => {
@@ -559,8 +544,8 @@ export const Arena = () => {
     const ctx = canvas.getContext('2d')
 
     const resizeCanvas = () => {
-      canvas.width = window.innerWidth - 50;
-      canvas.height = window.innerHeight - 100;
+      canvas.width = InsideRoom ? `${window.innerWidth - 300}`: `${window.innerWidth - 100}`;
+      canvas.height = window.innerHeight;
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -675,10 +660,35 @@ export const Arena = () => {
 
   }, [currentUser, users]);
 
+
+  function storeLastMove() {
+    const lastMove = {
+      x: currentUser.x,
+      y: currentUser.y
+    }
+    setLastcordinates(lastMove)
+  }
+
   const handleKeyDown = (e: any) => {
     if (!currentUser) return;
 
+    if (e.metaKey && e.key.toLowerCase() === "k") {
+      if (ontheChair) {
+        const lastMoves = lastcordinate
+        const x = lastMoves.x
+        const y = lastMoves.y
+        const movetostore = { x: x, y: y }
+        setOntheChair(false)
+        setLastcordinates(movetostore)
+        setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
+        handleMove(x, y,false)
+      }
+    }
+
+    if (ontheChair) return
+
     if (e.metaKey && e.key.toLowerCase() === "i") {
+
       if (possibleChairToSit) {
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
@@ -688,26 +698,28 @@ export const Arena = () => {
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
+            storeLastMove()
             setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
-            handleMove(x, y, true)
-
+            setOntheChair(true)
+            handleMove(x, y,true)
           }
         })
-
       }
     }
 
     switch (e.key) {
       case 'ArrowUp':
+        storeLastMove()
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y - 1;
-          handleMove(prev.x, newY, false);
+          handleMove(prev.x, newY,false);
           return { ...prev, y: newY };
         });
         break;
 
       case 'ArrowDown':
+        storeLastMove()
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y + 1;
@@ -717,19 +729,21 @@ export const Arena = () => {
         break;
 
       case 'ArrowLeft':
+        storeLastMove()
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x - 1;
-          handleMove(newX, prev.y, false);
+          handleMove(newX, prev.y,false);
           return { ...prev, x: newX };
         });
         break;
 
       case 'ArrowRight':
+        storeLastMove()
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x + 1;
-          handleMove(newX, prev.y, false);
+          handleMove(newX, prev.y,false);
           return { ...prev, x: newX };
         });
         break;
@@ -745,56 +759,55 @@ export const Arena = () => {
   }, [localVideoTrack]);
 
 
-  return (
-    <div className="" onKeyDown={handleKeyDown} tabIndex={0}>
-      <h1>{JSON.stringify(loading)}</h1>
-      <h1>message={JSON.stringify(message)}</h1>
-      <h1>coordinates={JSON.stringify(validCordinates)}</h1>
-
-      <div className="flex gap-7 mt-4">
-        <div className='relative'>
-
-          <p className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1">{currentUser.userId}</p>
-          {localStream &&
-            <video
-              ref={(el) => {
-                localVideoRef.current = el;
-                if (el) el.srcObject = localStream;
-              }}
-              autoPlay
-              playsInline
-              muted
-              className="w-40 h-32 bg-black object-cover rounded-lg"
-            />}
+  if (loading) {
+    return <h1>loading</h1>
+  } else {
+    return (
+      <div className="flex h-screen p-2 gap-2 w-full" onKeyDown={handleKeyDown} tabIndex={0}>
+        <div className=''>
+          <div className="border overflow-hidden h-full rounded-lg">
+            <canvas
+              ref={canvasRef}
+              className="bg-white"
+            />
+          </div>
         </div>
-
-        <div className=" flex flex-wrap  gap-7 ">
-          {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
-            <div key={userId} className="relative">
-              <p className="absolute top-0 left-0 bg-black/50 text-white text-xs p-1">{userId}</p>
-              <video
-                autoPlay
-                playsInline
-                muted
-                ref={(el) => {
-                  if (el) el.srcObject = stream;
-                }}
-                className="w-40 h-32 bg-black object-cover rounded-lg"
-              />
+        <div className='w-full'>
+          <div className="border p-4 rounded-lg h-full">
+            <div className=''>
+              {localStream &&
+                <video
+                  ref={(el) => {
+                    localVideoRef.current = el;
+                    if (el) el.srcObject = localStream;
+                  }}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="w-60 mx-auto h-32 bg-black object-cover rounded-lg"
+                />}
             </div>
-          ))}
+            <div className="">
+              {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
+                <div key={userId} className="pt-4">
+                  <p className="absolute top-0 left-0 bg-black/50 text-white text-xs ">{userId}</p>
+                  <video
+                    autoPlay
+                    playsInline
+                    muted
+                    ref={(el) => {
+                      if (el) el.srcObject = stream;
+                    }}
+                    className="w-60 mx-auto h-32 bg-black object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-      <div className="border m-3 overflow-scrollrounded-lg">
-        <canvas
-          ref={canvasRef}
-          className="bg-white block "
-        />
-      </div>
-      <p className="mt-2 text-sm text-gray-500">Use arrow keys to move your avatar</p>
-
-    </div>
-  );
+    );
+  }
 };
 
 export default Arena;
