@@ -68,7 +68,8 @@ router.post("/signin", async (req, res) => {
         },JWT_PASSWORD)
 
         return res.status(200).json({
-            token: token
+            token: token,
+            userId: user.id
         })
 
     } catch (error) {

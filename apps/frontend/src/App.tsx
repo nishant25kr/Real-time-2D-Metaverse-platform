@@ -5,6 +5,7 @@ import { Signup } from './Pages/Singup'
 import { Arena } from './Pages/Arena'
 import { Avatar } from './Pages/Avatar'
 import { Dashboard } from './Pages/Dashboard'
+import { Login } from './Pages/Login'
 
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
         <Route path='/avatar' element={<Avatar/>} />
         <Route path='/dashboard' element={<Dashboard/>} />
         <Route path='/space' element={<Arena/>} />
+        <Route path='/login' element={<Login/>} />
       </Routes>
     </BrowserRouter>
   )

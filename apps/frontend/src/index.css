@@ -1,1 +1,11 @@
-@import "tailwindcss";  
+@import "tailwindcss";
+
+@layer base {
+  html, body, #root {
+    background-color: #ffffff;
+    color: #111111;
+    min-height: 100%;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

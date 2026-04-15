@@ -5,142 +5,145 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 export const Avatar = () => {
     const [searchParams] = useSearchParams();
     const signup_token = searchParams.get("signup_token");
-
+    const [imageUrl, setImageUrl] = useState<string>("");
     const [name, setName] = useState<string>("default");
-    const [imageUrl, setImageurl] = useState<string>("");
-    const [loadingAvatar, setLoadingAvatar] = useState<boolean>(true);
+    const [loadingAvatars, setLoadingAvatars] = useState<boolean>(true);
     const [avatars, setAvatars] = useState<any[]>([]);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [error, setError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
-
     const navigate = useNavigate();
 
     async function fetchAvatars() {
         try {
-            if (!signup_token) {
-                setError("No token found");
-                return;
-            }
-
+            if (!signup_token) { setError("No token found."); return; }
             localStorage.setItem("token", signup_token);
-
             const res = await axios.get(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/admin/avatar`,
-                {
-                    headers: {
-                        authorization: `Bearer ${signup_token}`
-                    }
-                }
+                { headers: { authorization: `Bearer ${signup_token}` } }
             );
-
-            const formatted = res.data.avatars.map((item: any) => ({
-                id: item.id,
-                imageUrl: item.imageUrl
-            }));
-
-            setAvatars(formatted);
-        } catch (err: any) {
-            setError("Failed to load avatars");
+            setAvatars(res.data.avatars.map((item: any) => ({ id: item.id, imageUrl: item.imageUrl })));
+        } catch {
+            setError("Failed to load avatars.");
         } finally {
-            setLoadingAvatar(false);
+            setLoadingAvatars(false);
         }
     }
 
-    useEffect(() => {
-        fetchAvatars();
-    }, []);
+    useEffect(() => { fetchAvatars(); }, []);
 
     async function submitAvatar() {
-        if (!imageUrl) {
-            setError("Please select or enter an avatar");
-            return;
-        }
-
+        if (!imageUrl) { setError("Please select or enter an avatar URL."); return; }
         try {
             setSubmitting(true);
             setError("");
-
             const res = await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/admin/avatar`,
-                {
-                    imageUrl,
-                    name
-                },
-                {
-                    headers: {
-                        authorization: `Bearer ${signup_token}`
-                    }
-                }
+                { imageUrl, name },
+                { headers: { authorization: `Bearer ${signup_token}` } }
             );
-
             if (res.status === 200) {
                 navigate(`/dashboard/?token=${signup_token}`);
             }
-        } catch (err: any) {
-            setError("Failed to submit avatar");
+        } catch {
+            setError("Failed to save avatar.");
         } finally {
             setSubmitting(false);
         }
     }
 
-    if (loadingAvatar) {
-        return (
-            <div className="min-h-screen flex justify-center items-center text-white bg-black">
-                Loading avatars...
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-black text-white p-6">
-            <h2 className="text-2xl font-bold mb-4">Select Your Avatar</h2>
+        <div className="min-h-screen bg-white flex flex-col">
 
-            {error && <p className="text-red-500 mb-3">{error}</p>}
+            {/* Top bar */}
+            <div className="px-10 py-5 border-b border-gray-100">
+                <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
+            </div>
 
-            {/* Avatar list */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
-                {avatars.map((item) => (
-                    <div
-                        key={item.id}
-                        onClick={() => setImageurl(item.imageUrl)}
-                        className={`p-2 border rounded-xl cursor-pointer ${
-                            imageUrl === item.imageUrl
-                                ? "border-blue-500"
-                                : "border-gray-700"
-                        }`}
-                    >
-                        <img
-                            src={item.imageUrl}
-                            alt="avatar"
-                            className="w-full h-20 object-cover rounded"
+            <div className="max-w-3xl mx-auto w-full px-6 py-10 flex flex-col gap-8">
+
+                {/* Header */}
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Choose your avatar</h1>
+                    <p className="text-sm text-gray-400 mt-1">This is how others will see you in the metaverse.</p>
+                </div>
+
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-md">
+                        {error}
+                    </div>
+                )}
+
+                {/* Avatar Grid */}
+                {loadingAvatars ? (
+                    <div className="grid grid-cols-6 gap-3">
+                        {[...Array(12)].map((_, i) => (
+                            <div key={i} className="aspect-square bg-gray-100 rounded-lg animate-pulse" />
+                        ))}
+                    </div>
+                ) : avatars.length === 0 ? (
+                    <div className="border border-dashed border-gray-200 rounded-lg py-10 text-center">
+                        <p className="text-sm text-gray-400">No avatars available. Use a custom URL below.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-6 md:grid-cols-8 gap-3">
+                        {avatars.map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => { setSelectedId(item.id); setImageUrl(item.imageUrl); }}
+                                className={`aspect-square rounded-lg border-2 overflow-hidden transition-all ${
+                                    selectedId === item.id
+                                        ? "border-gray-900 shadow-md"
+                                        : "border-transparent hover:border-gray-300"
+                                }`}
+                            >
+                                <img
+                                    src={item.imageUrl}
+                                    alt="avatar"
+                                    className="w-full h-full object-cover"
+                                />
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* Custom Avatar */}
+                <div className="border border-gray-100 rounded-xl p-6">
+                    <h2 className="text-sm font-semibold text-gray-900 mb-4">Or use a custom avatar URL</h2>
+                    <div className="flex flex-col gap-3">
+                        <input
+                            type="text"
+                            placeholder="Image URL (https://...)"
+                            className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            onChange={(e) => { setImageUrl(e.target.value); setSelectedId(null); }}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Avatar name (optional)"
+                            className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            onChange={(e) => setName(e.target.value)}
                         />
                     </div>
-                ))}
-            </div>
+                </div>
 
-            {/* Custom avatar */}
-            <div className="space-y-3 max-w-sm">
-                <input
-                    type="text"
-                    placeholder="Custom avatar URL"
-                    className="w-full p-2 bg-gray-800 rounded"
-                    onChange={(e) => setImageurl(e.target.value)}
-                />
-
-                <input
-                    type="text"
-                    placeholder="Name"
-                    className="w-full p-2 bg-gray-800 rounded"
-                    onChange={(e) => setName(e.target.value)}
-                />
-
-                <button
-                    onClick={submitAvatar}
-                    disabled={submitting}
-                    className="w-full bg-blue-600 p-2 rounded hover:bg-blue-500"
-                >
-                    {submitting ? "Submitting..." : "Continue"}
-                </button>
+                {/* Preview + Submit */}
+                <div className="flex items-center justify-between">
+                    {imageUrl ? (
+                        <div className="flex items-center gap-3">
+                            <img src={imageUrl} alt="preview" className="w-10 h-10 rounded-full border border-gray-200 object-cover" />
+                            <p className="text-sm text-gray-500">Avatar preview</p>
+                        </div>
+                    ) : (
+                        <div />
+                    )}
+                    <button
+                        onClick={submitAvatar}
+                        disabled={submitting || !imageUrl}
+                        className="bg-gray-900 text-white rounded-md px-6 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {submitting ? "Saving..." : "Continue →"}
+                    </button>
+                </div>
             </div>
         </div>
     );

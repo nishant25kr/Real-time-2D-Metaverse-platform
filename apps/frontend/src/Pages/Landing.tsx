@@ -1,59 +1,63 @@
-export const Landing = () => {
-    return (
-        <div className="min-h-screen bg-linear-to-b from-black to-gray-900 text-white flex flex-col">
+import { useNavigate } from "react-router-dom";
 
-            {/* Navbar */}
-            <nav className="flex justify-between items-center px-8 py-4">
-                <h1 className="text-2xl font-bold">MetaVerse</h1>
-                <div className="space-x-6">
-                    <button className="hover:text-gray-300">Home</button>
-                    <button className="hover:text-gray-300">Explore</button>
-                    <button className="hover:text-gray-300">Login</button>
+export const Landing = () => {
+    const navigation = useNavigate();
+
+    return (
+        <div className="min-h-screen bg-white text-gray-900 flex flex-col">
+
+            {/* Nav */}
+            <nav className="flex justify-between items-center px-10 py-5 border-b border-gray-100">
+                <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">
+                    MetaVerse
+                </span>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => navigation("/login")}
+                        className="text-sm text-gray-500 px-4 py-2 hover:text-gray-900 transition-colors"
+                    >
+                        Log in
+                    </button>
+                    <button
+                        onClick={() => navigation("/signup")}
+                        className="text-sm bg-gray-900 text-white px-4 py-2 rounded-md font-medium hover:bg-gray-700 transition-colors"
+                    >
+                        Sign up
+                    </button>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <div className="flex flex-1 flex-col justify-center items-center text-center px-6">
-                <h1 className="text-5xl font-extrabold mb-4">
-                    Enter the Future of Virtual Worlds 🌐
+            {/* Hero */}
+            <div className="flex flex-1 flex-col justify-center items-center text-center px-6 gap-5">
+
+
+                <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-gray-900 max-w-2xl leading-tight">
+                    Virtual spaces for real collaboration
                 </h1>
-                <p className="text-gray-400 max-w-xl mb-6">
-                    Create your avatar, explore digital spaces, and connect with people in the metaverse.
+
+                <p className="text-gray-500 text-base max-w-md leading-relaxed">
+                    Create your avatar, explore digital spaces, and move around with others in real-time.
                 </p>
 
-                <div className="space-x-4">
-                    <button className="bg-blue-600 px-6 py-3 rounded-xl hover:bg-blue-500 transition">
-                        Get Started
+                <div className="flex items-center gap-3 mt-2">
+                    <button
+                        onClick={() => navigation("/signup")}
+                        className="bg-gray-900 text-white px-6 py-3 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
+                    >
+                        Get started free
                     </button>
-                    <button className="border border-gray-500 px-6 py-3 rounded-xl hover:bg-gray-800 transition">
-                        Learn More
+                    <button
+                        onClick={() => navigation("/login")}
+                        className="border border-gray-200 text-gray-600 px-6 py-3 rounded-md text-sm font-medium hover:border-gray-400 hover:text-gray-900 transition-colors"
+                    >
+                        Log in
                     </button>
                 </div>
             </div>
 
-            {/* Features */}
-            <div className="grid md:grid-cols-3 gap-6 px-10 py-10">
-                <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">🧑‍🚀 Avatars</h2>
-                    <p className="text-gray-400">Customize your digital identity.</p>
-                </div>
-
-                <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">🌍 Spaces</h2>
-                    <p className="text-gray-400">Create and explore virtual worlds.</p>
-                </div>
-
-                <div className="bg-gray-800 p-6 rounded-2xl shadow-lg">
-                    <h2 className="text-xl font-semibold mb-2">🤝 Connect</h2>
-                    <p className="text-gray-400">Meet and interact with others.</p>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <footer className="text-center py-4 text-gray-500 text-sm">
-                © 2026 MetaVerse. All rights reserved.
+            <footer className="text-center py-5 border-t border-gray-100 text-xs text-gray-400">
+                MetaVerse
             </footer>
-
         </div>
     );
 };

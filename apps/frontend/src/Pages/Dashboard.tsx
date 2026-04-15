@@ -9,10 +9,9 @@ export const Dashboard = () => {
     const [width, setWidth] = useState<string>("")
     const [height, setHeight] = useState<string>("")
     const [mapId, setMapId] = useState<string>("")
-    const [selectedId, setSelectedId] = useState<string>("")
+    const [creating, setCreating] = useState<boolean>(false)
     const [error, setError] = useState<string>("")
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token') || '';
+    const [formError, setFormError] = useState<string>("")
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -22,28 +21,18 @@ export const Dashboard = () => {
     async function fetchSpace() {
         try {
             setLoading(true)
-
             const res = await axios.get(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/space/all`,
-                {
-                    headers: {
-                        authorization: `Bearer ${localStorage.getItem("token")}`
-                    }
-                }
+                { headers: { authorization: `Bearer ${localStorage.getItem("token")}` } }
             )
-
-            const data = res.data.spaces
-                .slice(0, 10)
-                .map((s: any) => ({
-                    id: s.id,
-                    name: s.name,
-                    dimension: s.dimensions
-                }))
-
+            const data = res.data.spaces.slice(0, 10).map((s: any) => ({
+                id: s.id,
+                name: s.name,
+                dimension: s.dimensions
+            }))
             setSpaces(data)
-
-        } catch (err) {
-            setError("Failed to fetch spaces")
+        } catch {
+            setError("Failed to load your spaces.")
         } finally {
             setLoading(false)
         }
@@ -51,126 +40,125 @@ export const Dashboard = () => {
 
     async function HandleSubmit() {
         if (!name || !width || !height || !mapId) {
-            setError("All fields are required")
+            setFormError("All fields are required.")
             return
         }
-
         try {
-            setError("")
-
-            const res = await axios.post(
+            setCreating(true)
+            setFormError("")
+            await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/space`,
-                {
-                    name,
-                    width,
-                    height,
-                    mapId
-                },
-                {
-                    headers: {
-                        authorization: `Bearer ${localStorage.getItem("token")}`
-                    }
-                }
+                { name, width, height, mapId },
+                { headers: { authorization: `Bearer ${localStorage.getItem("token")}` } }
             )
-
-            console.log(res.data)
-
+            setName(""); setWidth(""); setHeight(""); setMapId("")
             fetchSpace()
-
-            setName("")
-            setWidth("")
-            setHeight("")
-            setMapId("")
-
-        } catch (err) {
-            setError("Failed to create space")
+        } catch {
+            setFormError("Failed to create space.")
+        } finally {
+            setCreating(false)
         }
-    }
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex justify-center items-center bg-black text-white">
-                Loading spaces...
-            </div>
-        )
     }
 
     return (
-        <div className="min-h-screen bg-black text-white p-6">
+        <div className="min-h-screen bg-white flex flex-col">
 
-            <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-
-            {error && (
-                <p className="text-red-500 mb-4">{error}</p>
-            )}
-
-            {/* Spaces List */}
-            <h2 className="text-xl mb-3">Your Spaces (Top 10)</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                {spaces.map((item) => (
-                    <div
-                        key={item.id}
-
-                        onClick={() => {
-                            setSelectedId(item.id)
-                            navigate(`/space/?spaceId=${item.id}&token=${token}`)
-                        }}
-                        className={`p-4 border rounded-xl cursor-pointer ${selectedId === item.id
-                                ? "border-blue-500"
-                                : "border-gray-700"
-                            }`}
-                    >
-                        <p className="font-semibold">{item.name}</p>
-                        <p className="text-gray-400 text-sm">
-                            {item.dimension}
-                        </p>
-                    </div>
-                ))}
+            <div className="px-10 py-5 border-b border-gray-100 flex justify-between items-center">
+                <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
+                <button
+                    onClick={() => { localStorage.clear(); navigate("/") }}
+                    className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                    Log out
+                </button>
             </div>
 
-            {/* Create Space */}
-            <h2 className="text-xl mb-3">Create New Space</h2>
-            <div className="grid gap-3 max-w-md">
+            <div className="max-w-4xl mx-auto w-full px-6 py-10 flex flex-col gap-10">
 
-                <input
-                    type="text"
-                    placeholder="Space Name"
-                    className="p-2 rounded bg-gray-800"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
+                <div>
+                    <div className="flex items-center justify-between mb-5">
+                        <h2 className="text-lg font-semibold text-gray-900">Your Spaces</h2>
+                        <span className="text-xs text-gray-400">{spaces.length} / 10</span>
+                    </div>
 
-                <input
-                    type="text"
-                    placeholder="Width"
-                    className="p-2 rounded bg-gray-800"
-                    value={width}
-                    onChange={(e) => setWidth(e.target.value)}
-                />
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-md mb-4">
+                            {error}
+                        </div>
+                    )}
 
-                <input
-                    type="text"
-                    placeholder="Height"
-                    className="p-2 rounded bg-gray-800"
-                    value={height}
-                    onChange={(e) => setHeight(e.target.value)}
-                />
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="h-20 bg-gray-100 rounded-lg animate-pulse" />
+                            ))}
+                        </div>
+                    ) : spaces.length === 0 ? (
+                        <div className="border border-dashed border-gray-200 rounded-lg py-12 text-center">
+                            <p className="text-gray-400 text-sm">No spaces yet. Create one below.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {spaces.map((item) => (
+                                <div
+                                    key={item.id}
+                                    onClick={() => navigate(`/space/?spaceId=${item.id}&token=${localStorage.getItem("token")}`)}
+                                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-gray-400 hover:shadow-sm transition-all group"
+                                >
+                                    <p className="font-medium text-gray-900 text-sm group-hover:text-gray-700">{item.name}</p>
+                                    <p className="text-xs text-gray-400 mt-1">{item.dimension ?? "Dimensions not set"}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
 
-                <input
-                    type="text"
-                    placeholder="Map ID"
-                    className="p-2 rounded bg-gray-800"
-                    value={mapId}
-                    onChange={(e) => setMapId(e.target.value)}
-                />
+                <div className="border border-gray-100 rounded-xl p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-5">Create a new space</h2>
 
-                <button
-                    onClick={HandleSubmit}
-                    className="bg-blue-600 p-2 rounded hover:bg-blue-500"
-                >
-                    Create Space
-                </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <input
+                            type="text"
+                            placeholder="Space name"
+                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Map ID"
+                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            value={mapId}
+                            onChange={(e) => setMapId(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Width (e.g. 100)"
+                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            value={width}
+                            onChange={(e) => setWidth(e.target.value)}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Height (e.g. 100)"
+                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            value={height}
+                            onChange={(e) => setHeight(e.target.value)}
+                        />
+                    </div>
 
+                    {formError && (
+                        <p className="text-red-500 text-sm mt-3">{formError}</p>
+                    )}
+
+                    <button
+                        onClick={HandleSubmit}
+                        disabled={creating}
+                        className="mt-4 bg-gray-900 text-white rounded-md px-5 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {creating ? "Creating..." : "Create space"}
+                    </button>
+                </div>
             </div>
         </div>
     )
