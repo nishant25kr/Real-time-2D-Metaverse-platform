@@ -32,16 +32,18 @@ export const Arena = () => {
   const [ontheChair, setOntheChair] = useState<boolean>(false)
   const [message, setMessage] = useState<string>("go near chair")
   const [validCordinates, setValidCordinates] = useState<any>(null as any)
+  const [invalidCordinates, setInvalidCordinates] = useState<any>(null as any)
   const [lastcordinate, setLastcordinates] = useState<any>({})
   const [InsideRoom, setInsideRoom] = useState<boolean>(false)
 
   const rooms = [
-    { minX: 1, maxX: 20, minY: 1, maxY: 20, name: "Room A" },
-    { minX: 21, maxX: 40, minY: 1, maxY: 20, name: "Room B" },
-    { minX: 41, maxX: 60, minY: 1, maxY: 20, name: "Room C" },
-    { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
-    { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
+    { minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room A" },
+    { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room B" },
+    { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room C" },
+    // { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
+    // { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
+
 
   useEffect(() => {
     setLoading(true)
@@ -83,6 +85,54 @@ export const Arena = () => {
         })
       })
       setValidCordinates(ctoset)
+
+      let invalidCoordinatestoset: object[] = [];
+      let obj = {};
+
+      function addInVariable(obj: object, doors: object[]) {
+        let temp: boolean = true;
+        doors.forEach((item: any) => {
+          if (item.x == obj.x && item.y == obj.y) temp = false;
+        })
+        if (temp) {
+          invalidCoordinatestoset.push(obj);
+        }
+      }
+      rooms.forEach((r) => {
+        console.log(r)
+        const doors = [
+          { x: (r.minX+r.maxX) / 2, y: r.maxY },
+          { x: (r.minX+r.maxX) / 2 - 1, y: r.maxY },
+          { x: (r.minX+r.maxX) / 2 + 1, y: r.maxY },
+          { x: (r.minX+r.maxX) / 2, y: r.maxY }
+        ]
+        for (let i = 0; i < 20; i++) {
+          obj = {
+            x: r.minX,
+            y: r.minY + i
+          }
+          addInVariable(obj, doors)
+          obj = {
+            x: r.minX + i,
+            y: r.minY
+          }
+          addInVariable(obj, doors)
+          obj = {
+            x: r.maxX,
+            y: r.minY + i
+          }
+          addInVariable(obj, doors)
+          obj = {
+            x: r.minX + i,
+            y: r.maxY
+          }
+          addInVariable(obj, doors)
+        }
+        console.log(doors)
+      })
+      console.log("invalid moves", invalidCoordinatestoset)
+      setInvalidCordinates(invalidCoordinatestoset)
+
     }
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -117,7 +167,7 @@ export const Arena = () => {
 
   const furniture: Furniture[] = [
     {
-      id: 'table-a1', type: 'rect-table', x: 2, y: 4, width: 16, height: 6,
+      id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -132,7 +182,7 @@ export const Arena = () => {
       ]
     },
     {
-      id: 'table-a2', type: 'rect-table', x: 22, y: 4, width: 16, height: 6,
+      id: 'table-a2', type: 'rect-table', x: 25, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -519,6 +569,7 @@ export const Arena = () => {
   };
 
   const handleMove = (newX: any, newY: any, isSitting: boolean) => {
+
     console.log("inside handle move ")
     if (!currentUser) return;
     const isInsideRoom = CheckisinsideRoom(newX, newY)
@@ -544,7 +595,7 @@ export const Arena = () => {
     const ctx = canvas.getContext('2d')
 
     const resizeCanvas = () => {
-      canvas.width = InsideRoom ? `${window.innerWidth - 300}`: `${window.innerWidth - 100}`;
+      canvas.width = InsideRoom ? `${window.innerWidth - 300}` : `${window.innerWidth - 100}`;
       canvas.height = window.innerHeight;
     }
 
@@ -604,13 +655,14 @@ export const Arena = () => {
         ctx.roundRect(px + CELL_SIZE / 2, py + CELL_SIZE / 2, pw, ph, 6);
         ctx.fill();
         ctx.stroke();
+
       }
 
       if (item.label) {
         ctx.fillStyle = item.type === 'solo-desk' ? '#e0e7ff' : '#451a03';
         ctx.font = '11px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(item.label, px + pw / 2, py + ph / 2 + 4);
+        ctx.fillText(item.label, px + pw / 2, py + ph / 2 + 13);
       }
     };
 
@@ -622,14 +674,13 @@ export const Arena = () => {
       const width = (room.maxX - room.minX) * CELL_SIZE;
       const height = (room.maxY - room.minY) * CELL_SIZE;
 
-      ctx.fillStyle = 'rgba(0, 150, 255, 0.08)';
-      ctx.fillRect(startX, startY, width, height);
-      ctx.strokeStyle = '#3b82f6';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(startX, startY, width, height);
-      ctx.fillStyle = '#1e40af';
-      ctx.font = 'bold 13px monospace';
-      ctx.textAlign = 'center';
+      ctx.beginPath();
+      ctx.roundRect(startX, startY, width, height, 1);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 13;
+      ctx.stroke();
+      ctx.clearRect((startX + width / 2 - 20)-10, startY + height - 7, 60, 20);
+
     });
 
 
@@ -669,6 +720,16 @@ export const Arena = () => {
     setLastcordinates(lastMove)
   }
 
+  function checkValidMove(x: number, y: number) {
+    let answer: boolean = true;
+    invalidCordinates.forEach((element: any) => {
+      if (element.x === x && element.y === y) {
+        answer = false
+      }
+    });
+    return answer;
+  }
+
   const handleKeyDown = (e: any) => {
     if (!currentUser) return;
 
@@ -680,8 +741,9 @@ export const Arena = () => {
         const movetostore = { x: x, y: y }
         setOntheChair(false)
         setLastcordinates(movetostore)
+        checkValidMove(x, y)
         setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
-        handleMove(x, y,false)
+        handleMove(x, y, false)
       }
     }
 
@@ -692,16 +754,18 @@ export const Arena = () => {
       if (possibleChairToSit) {
         furniture[0].chairs.forEach((e) => {
           if (e.chairId === possibleChairToSit) {
-            const px = 2 * CELL_SIZE;
-            const py = 4 * CELL_SIZE;
+            const px = 4 * CELL_SIZE;
+            const py = 6 * CELL_SIZE;
             const cx = px + e.dx * CELL_SIZE + CELL_SIZE / 2;
             const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
             const x = Math.floor(cx / CELL_SIZE) + 1;
             const y = Math.floor(cy / CELL_SIZE) + 1;
             storeLastMove()
+            console.log(x,y)
+            // checkValidMove(x, y)
             setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
             setOntheChair(true)
-            handleMove(x, y,true)
+            handleMove(x, y, true)
           }
         })
       }
@@ -713,7 +777,13 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y - 1;
-          handleMove(prev.x, newY,false);
+          const res: boolean = checkValidMove(prev.x, newY)
+          console.log(res)
+          if (!res) {
+            console.log("!res")
+            return { ...prev }
+          }
+          handleMove(prev.x, newY, false);
           return { ...prev, y: newY };
         });
         break;
@@ -723,17 +793,31 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y + 1;
+          const res: boolean = checkValidMove(prev.x, newY)
+          console.log(res)
+          if (!res) {
+            console.log("!res")
+            return { ...prev }
+          }
           handleMove(prev.x, newY, false);
           return { ...prev, y: newY };
         });
         break;
 
       case 'ArrowLeft':
+
         storeLastMove()
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x - 1;
-          handleMove(newX, prev.y,false);
+
+          const res: boolean = checkValidMove(newX, prev.y)
+          console.log(res)
+          if (!res) {
+            console.log("!res")
+            return { ...prev }
+          }
+          handleMove(newX, prev.y, false);
           return { ...prev, x: newX };
         });
         break;
@@ -743,7 +827,13 @@ export const Arena = () => {
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x + 1;
-          handleMove(newX, prev.y,false);
+          const res: boolean = checkValidMove(newX, prev.y)
+          console.log(res)
+          if (!res) {
+            console.log("!res")
+            return { ...prev }
+          }
+          handleMove(newX, prev.y, false);
           return { ...prev, x: newX };
         });
         break;
@@ -760,54 +850,107 @@ export const Arena = () => {
 
 
   if (loading) {
-    return <h1>loading</h1>
-  } else {
     return (
-      <div className="flex h-screen p-2 gap-2 w-full" onKeyDown={handleKeyDown} tabIndex={0}>
-        <div className=''>
-          <div className="border overflow-hidden h-full rounded-lg">
-            <canvas
-              ref={canvasRef}
-              className="bg-white"
-            />
-          </div>
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="px-10 py-5 border-b border-gray-100">
+          <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
         </div>
-        <div className='w-full'>
-          <div className="border p-4 rounded-lg h-full">
-            <div className=''>
-              {localStream &&
-                <video
-                  ref={(el) => {
-                    localVideoRef.current = el;
-                    if (el) el.srcObject = localStream;
-                  }}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-60 mx-auto h-32 bg-black object-cover rounded-lg"
-                />}
-            </div>
-            <div className="">
-              {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
-                <div key={userId} className="pt-4">
-                  <p className="absolute top-0 left-0 bg-black/50 text-white text-xs ">{userId}</p>
-                  <video
-                    autoPlay
-                    playsInline
-                    muted
-                    ref={(el) => {
-                      if (el) el.srcObject = stream;
-                    }}
-                    className="w-60 mx-auto h-32 bg-black object-cover rounded-lg"
-                  />
-                </div>
-              ))}
-            </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+            <p className="text-sm text-gray-400">Connecting to space...</p>
           </div>
         </div>
       </div>
     );
   }
+
+  return (
+    <div
+      className="flex flex-col h-screen bg-white"
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      style={{ outline: 'none' }}
+    >
+      {/* Top bar */}
+      <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+        <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
+        <div className="flex items-center gap-3">
+          {InsideRoom && (
+            <span className="inline-flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+              In room
+            </span>
+          )}
+          <span className="text-xs text-gray-400">{message}</span>
+        </div>
+      </div>
+
+      {/* Main layout */}
+      <div className="flex flex-1 overflow-hidden">
+
+        {/* Canvas area */}
+        <div className="flex-1 overflow-hidden border-r border-gray-100">
+          <canvas
+            ref={canvasRef}
+            className="bg-white block"
+          />
+        </div>
+
+        {/* Video panel — only shown when inside a room */}
+        {InsideRoom && (
+          <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
+
+            <div className="px-4 py-3 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Participants</p>
+            </div>
+
+            <div className="flex flex-col gap-3 p-4 overflow-y-auto flex-1">
+
+              {/* Local video */}
+              {localStream ? (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs text-gray-400">You</p>
+                  <video
+                    ref={(el) => {
+                      localVideoRef.current = el;
+                      if (el) el.srcObject = localStream;
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full aspect-video bg-gray-100 object-cover rounded-lg border border-gray-200"
+                  />
+                </div>
+              ) : (
+                <div className="w-full aspect-video bg-gray-100 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
+                  <p className="text-xs text-gray-400">Camera off</p>
+                </div>
+              )}
+
+              {/* Remote videos */}
+              {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
+                <div key={userId} className="flex flex-col gap-1.5">
+                  <p className="text-xs text-gray-400 truncate">{userId.slice(0, 8)}...</p>
+                  <video
+                    autoPlay
+                    playsInline
+                    muted
+                    ref={(el) => { if (el) el.srcObject = stream; }}
+                    className="w-full aspect-video bg-gray-100 object-cover rounded-lg border border-gray-200"
+                  />
+                </div>
+              ))}
+
+              {!localStream && remoteStreams.size === 0 && (
+                <p className="text-xs text-gray-400 text-center mt-4">No one else is here yet.</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default Arena;
