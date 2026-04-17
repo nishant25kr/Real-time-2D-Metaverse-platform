@@ -40,8 +40,8 @@ export const Arena = () => {
     { minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room A" },
     { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room B" },
     { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room C" },
-    // { minX: 1, maxX: 20, minY: 30, maxY: 42, name: "Room D" },
-    // { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
+    { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room D" },
+    { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
   ];
 
 
@@ -98,7 +98,9 @@ export const Arena = () => {
           invalidCoordinatestoset.push(obj);
         }
       }
-      rooms.forEach((r) => {
+
+      furniture.forEach((item) => {
+        const r = item.room
         console.log(r)
         const doors = [
           { x: (r.minX+r.maxX) / 2, y: r.maxY },
@@ -167,7 +169,8 @@ export const Arena = () => {
 
   const furniture: Furniture[] = [
     {
-      id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6,
+      room:{ minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room A" },
+      id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6, rotate: 0,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -182,6 +185,7 @@ export const Arena = () => {
       ]
     },
     {
+      room:{ minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room B" },
       id: 'table-a2', type: 'rect-table', x: 25, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
@@ -196,6 +200,9 @@ export const Arena = () => {
         { dx: 13, dy: 6, rotate: 180, chairId: 8 },
       ]
     }
+    // {
+    //   room:{ minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room C" },
+    // }
   ];
 
   const cleanupConnection = () => {
@@ -843,10 +850,10 @@ export const Arena = () => {
   useEffect(() => {
     if (localVideoRef.current && localVideoTrack) {
       const stream = new MediaStream([localVideoTrack]);
-      localVideoRef.current.srcObject = stream;
-      localVideoRef.current.play().catch(() => { });
-    }
-  }, [localVideoTrack]);
+        localVideoRef.current.srcObject = stream;
+        localVideoRef.current.play().catch(() => { });
+      }
+    }, [localVideoTrack]);
 
 
   if (loading) {
@@ -872,7 +879,6 @@ export const Arena = () => {
       tabIndex={0}
       style={{ outline: 'none' }}
     >
-      {/* Top bar */}
       <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
         <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
         <div className="flex items-center gap-3">
@@ -886,10 +892,8 @@ export const Arena = () => {
         </div>
       </div>
 
-      {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Canvas area */}
         <div className="flex-1 overflow-hidden border-r border-gray-100">
           <canvas
             ref={canvasRef}
@@ -897,7 +901,6 @@ export const Arena = () => {
           />
         </div>
 
-        {/* Video panel — only shown when inside a room */}
         {InsideRoom && (
           <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
 
@@ -907,7 +910,6 @@ export const Arena = () => {
 
             <div className="flex flex-col gap-3 p-4 overflow-y-auto flex-1">
 
-              {/* Local video */}
               {localStream ? (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-xs text-gray-400">You</p>
@@ -928,7 +930,6 @@ export const Arena = () => {
                 </div>
               )}
 
-              {/* Remote videos */}
               {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
                 <div key={userId} className="flex flex-col gap-1.5">
                   <p className="text-xs text-gray-400 truncate">{userId.slice(0, 8)}...</p>
