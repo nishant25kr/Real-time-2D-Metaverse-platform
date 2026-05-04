@@ -101,7 +101,9 @@ export class User {
                             this,
                             this.spaceId!
                         );
-                         if(parsedData.payload.isinsideRoom){
+                        
+                        if(parsedData.payload.isSitting){
+                            //todo:add logic of checking room already exist if yes then add the user of create a room and add it
                             MeetingRoomManager.getInstance().addUser("meetingRoom1", this)
                         } else {
                             MeetingRoomManager.getInstance().handleUserLeftMeeting("meetingRoom1", this)

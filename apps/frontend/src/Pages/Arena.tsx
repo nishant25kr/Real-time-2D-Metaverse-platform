@@ -590,7 +590,7 @@ export const Arena = () => {
         x: newX,
         y: newY,
         userId: currentUser.userId,
-        isinsideRoom: isSitting,
+        isSitting: isSitting,
       }
     }));
   };
