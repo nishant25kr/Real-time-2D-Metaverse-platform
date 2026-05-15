@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
+import { useMyRef } from '../hooks/useMyRef.js'
 
 const CELL_SIZE = 20;
 
@@ -11,9 +12,9 @@ const configuration = {
 };
 
 export const Arena = () => {
+  const wsRef = useMyRef()
   const [loading, setLoading] = useState<boolean>(false)
   const canvasRef = useRef<any>(null);
-  const wsRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({} as any);
   const [users, setUsers] = useState(new Map());
   // const [chairCordinates, setChairCordinates] = useState<object[]>([])

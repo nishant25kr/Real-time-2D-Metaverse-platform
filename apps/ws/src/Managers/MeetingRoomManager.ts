@@ -1,8 +1,10 @@
 import type { OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
+import { MeetingRoom } from "./MeetingRoom.js";
 
 export class MeetingRoomManager {
     meetingRoom: Map<string, User[]> = new Map()
+    meetingRooms: Map<string, MeetingRoom> = new Map()
     static instance: MeetingRoomManager
 
     constructor() {
@@ -16,38 +18,60 @@ export class MeetingRoomManager {
         return this.instance
     }
 
-    public addUser(meetingId: string, user: User) {
-        const roomUsers = this.meetingRoom.get(meetingId) || [];
-        this.meetingRoom.set(meetingId, roomUsers.filter(u => u.userId !== user.userId));
-        
-        this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user]);
-        const length = this.meetingRoom.get(meetingId)?.length!
-        if (length < 2) return;
+    public getRoom(roomId: string){
+        const room = this.meetingRooms.get(roomId)
+        if(!room) return;
+        return room;
+    }
 
-        user.ws.send(
-            JSON.stringify({
-                type: "init-call",
-                payload: {
-                    meetingId: meetingId,
-                    id: Array.from(new Set(this.meetingRoom.get(meetingId)?.map(u => u.userId))) || [],
-                }
-            })
-        )
+    public createRoom(roomId: string){
+        const room = new MeetingRoom(roomId)
+        this.meetingRooms.set(roomId, room)
+        return room;
+    }
+
+    public deleteRoom(){
+
+    }
+
+    
+
+    public addUser(meetingId: string, user: User) {
+        // const roomUsers = this.meetingRoom.get(meetingId) || [];
+        // this.meetingRoom.set(meetingId, roomUsers.filter(u => u.userId !== user.userId));
+        
+        // this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user]);
+        // const length = this.meetingRoom.get(meetingId)?.length!
+        // if (length < 2) return;
+
+        // user.ws.send(
+        //     JSON.stringify({
+        //         type: "init-call",
+        //         payload: {
+        //             meetingId: meetingId,
+        //             id: Array.from(new Set(this.meetingRoom.get(meetingId)?.map(u => u.userId))) || [],
+        //         }
+        //     })
+        // )
+
     }
 
     public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
-        if (!this.meetingRoom.get(meetingId)?.find(u => u === user)) return
-        this.meetingRoom.get(meetingId)?.forEach((e) => {
-            if (e.id !== user.id) {
-                e.ws.send(
-                    JSON.stringify(message)
-                )
-            }
-        })
+        // if (!this.meetingRoom.get(meetingId)?.find(u => u === user)) return
+        // this.meetingRoom.get(meetingId)?.forEach((e) => {
+        //     if (e.id !== user.id) {
+        //         e.ws.send(
+        //             JSON.stringify(message)
+        //         )
+        //     }
+        // })
+        
+
+
     }
 
     public onOffer(targetId: string, meetingId: string, sdp: any, user: User) {
-        const room = this.meetingRoom.get(meetingId);
+        const room = this.meetingRooms.get(meetingId);
         if (!room) return;
 
         this.meetingRoom.get(meetingId)?.forEach(u => {
@@ -78,7 +102,6 @@ export class MeetingRoomManager {
             }));
         }
     }
-
 
     public onIceCandidate(targetId: string, meetingId: string, candidate: any, type: string, user: User) {
         const room = this.meetingRoom.get(meetingId);
