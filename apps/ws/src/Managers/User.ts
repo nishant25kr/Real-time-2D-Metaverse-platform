@@ -103,19 +103,10 @@ export class User {
                         );
                         
                         if(parsedData.payload.isSitting){
-                            //todo:add logic of checking room already exist if yes then add the user of create a room and add it
-                            // MeetingRoomManager.getInstance().addUser("meetingRoom1", this)
-                            const room = MeetingRoomManager.getInstance().getRoom(parsedData.payload.meetingId)
-                            if(!room){
-                                const room = MeetingRoomManager.getInstance().createRoom(parsedData.payload.meetingId)
-                                room.addUser(parsedData.payload.meetingId,this)
-                            }
-                            room?.addUser(parsedData.payload.meetingId,this)
+                            MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
                             
                         } else {
-                            MeetingRoomManager.getInstance().handleUserLeftMeeting("meetingRoom1", this)
-                            const room = MeetingRoomManager.getInstance().getRoom(parsedData.payload.meetingId)
-                            room?.removeUser(this)
+                            MeetingRoomManager.getInstance().handleUserLeftMeeting(parsedData.payload.roomId, this)
                         }
                     }
                     else {

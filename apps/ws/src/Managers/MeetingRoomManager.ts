@@ -3,12 +3,11 @@ import type { User } from "./User.js";
 import { MeetingRoom } from "./MeetingRoom.js";
 
 export class MeetingRoomManager {
-    meetingRoom: Map<string, User[]> = new Map()
     meetingRooms: Map<string, MeetingRoom> = new Map()
     static instance: MeetingRoomManager
 
     constructor() {
-        this.meetingRoom = new Map()
+        this.meetingRooms = new Map()
     }
 
     static getInstance() {
@@ -30,30 +29,20 @@ export class MeetingRoomManager {
         return room;
     }
 
-    public deleteRoom(){
+    public deleteRoom(roomId: string){
+        this.meetingRooms.delete(roomId)
 
     }
 
-    
-
-    public addUser(meetingId: string, user: User) {
-        // const roomUsers = this.meetingRoom.get(meetingId) || [];
-        // this.meetingRoom.set(meetingId, roomUsers.filter(u => u.userId !== user.userId));
-        
-        // this.meetingRoom.set(meetingId, [...(this.meetingRoom.get(meetingId) ?? []), user]);
-        // const length = this.meetingRoom.get(meetingId)?.length!
-        // if (length < 2) return;
-
-        // user.ws.send(
-        //     JSON.stringify({
-        //         type: "init-call",
-        //         payload: {
-        //             meetingId: meetingId,
-        //             id: Array.from(new Set(this.meetingRoom.get(meetingId)?.map(u => u.userId))) || [],
-        //         }
-        //     })
-        // )
-
+    public addUser(roomId: string, user: User) {
+        const room = this.meetingRooms.get(roomId);
+        if(!room){
+            const room = this.createRoom(roomId)
+            room?.addUser(user);    
+            return;
+        }else{
+            room?.addUser(user);
+        }
     }
 
     public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
@@ -70,74 +59,36 @@ export class MeetingRoomManager {
 
     }
 
-    public onOffer(targetId: string, meetingId: string, sdp: any, user: User) {
-        const room = this.meetingRooms.get(meetingId);
+    public onOffer(targetId: string, roomId: string, sdp: any, user: User) {
+        const room = this.meetingRooms.get(roomId);
         if (!room) return;
-
-        this.meetingRoom.get(meetingId)?.forEach(u => {
-            if (targetId === u.userId) {
-                u.ws.send(
-                    JSON.stringify({
-                        type: "offer",
-                        payload: {
-                            meetingId: meetingId,
-                            sdp,
-                            senderId: user.userId
-                        }
-                    })
-                )
-            }
-        })
+        room?.onOffer(targetId, sdp, user)
     }
 
-    public onAnswer(targetId: string, meetingId: string, sdp: any, user: User) {
-        const targetUser = this.meetingRoom.get(meetingId)?.find(u => u.userId === targetId);
-        if (targetUser) {
-            targetUser.ws.send(JSON.stringify({
-                type: "answer",
-                payload: {
-                    sdp,
-                    senderId: user.userId
-                }
-            }));
-        }
+    public onAnswer(targetId: string, roomId: string, sdp: any, user: User) {
+        const room = this.meetingRooms.get(roomId)
+        if(!room) return;
+
+        room.onAnswer(targetId, sdp, user)
     }
 
-    public onIceCandidate(targetId: string, meetingId: string, candidate: any, type: string, user: User) {
-        const room = this.meetingRoom.get(meetingId);
+    public onIceCandidate(targetId: string, roomId: string, candidate: any, type: string, user: User) {
+    const room = this.meetingRooms.get(roomId);
         if (!room || !user) return;
 
-        const targetUser = room.find(u => u.userId === targetId);
-        if (targetUser) {
-            targetUser.ws.send(JSON.stringify({
-                type: "add-ice-candidate",
-                payload: {
-                    candidate,
-                    type,
-                    senderId: user.userId
-                }
-            }));
-        }
+        room.onIceCandidate(targetId, candidate,type,user)
+
     }
 
-    public removeUser(meetingId: string, userId: string) {
-        const room = this.meetingRoom.get(meetingId);
-        if (room) {
-            this.meetingRoom.set(meetingId, room.filter(u => u.id !== userId));
-        }
-    }
+    public handleUserLeftMeeting(roomId: string, user: User) {
+        const room = this.getRoom(roomId)
+        room?.removeUser(user)
 
-    public handleUserLeftMeeting(meetingId: string, user: User) {
-        this.removeUser(meetingId, user.id);
+        //TODO: check the users length if it is 0 delete the class and from the map also
+        // const roomlength = room?.getUserLength()
+
+        // if(roomlength == 0) this.deleteRoom(roomId)
         
-        this.meetingRoom.get(meetingId)?.forEach((u) => {
-            u.ws.send(JSON.stringify({
-                type: "user-left-meeting",
-                payload: {
-                    userId: user.userId
-                }
-            }));
-        });
     }
 
 }
