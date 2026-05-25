@@ -6,20 +6,22 @@ import { string } from "zod";
 export class MeetingRoom{
     public roomId: string;
     private users : User[];
-    static instance: MeetingRoom
 
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];
+        // setInterval(() => {
+        //     console.log(roomId)
+        //     console.log(this.users.length)
+        // }, 2000);
     }
     
     public addUser(user: User){
-        
         if(this.users.find( u => u.id === user.id)) return;
         this.users.push(user)
         const length = this.users.length
         if(length < 2) return;
-
+        console.log("broadcasting init call")
         user.ws.send(
             JSON.stringify({
                 type: "init-call",
@@ -33,7 +35,7 @@ export class MeetingRoom{
     }
 
     public removeUser(user:User){
-        this.users = this.users.filter(u => u.id === user.id)
+        this.users = this.users.filter(u => u.id !== user.id);
 
         this.users.forEach((u) => {
             u.ws.send(JSON.stringify({
@@ -93,7 +95,6 @@ export class MeetingRoom{
     }
 
     public onIceCandidate(targetId: string, candidate: any, type: string, user: User){
-
         const targetUser = this.users.find(u => u.userId === targetId);
         if (targetUser) {
             targetUser.ws.send(JSON.stringify({

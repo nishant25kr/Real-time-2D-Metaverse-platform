@@ -286,20 +286,20 @@ export const Arena = () => {
     )
   }
 
-  function CheckisinsideRoom(x: any, y: any) {
-    const inside = rooms.some(room =>
-      x >= room.minX && x <= room.maxX && y >= room.minY && y <= room.maxY
-    );
-    setInsideRoom(inside)
-
-    if (!inside && localStreamRef.current) {
-      cleanupConnection();
-    }
-
-    return inside;
+  function CheckisinsideRoom(x: any, y: any) { 
+    let roomId; 
+    furniture.forEach((e) => {
+      if(x >= e.room.minX && x <= e.room.maxX && y >= e.room.minY && y <= e.room.maxY){
+        // console.log("roomId inside",e.room.name)
+        setInsideRoom(true)
+        roomId = e.room.name
+      } 
+    })
+    // console.log("roomId",roomId)
+    return roomId;
   }
 
-  async function sendOffer(i: string) {
+  async function sendOffer(i: string, meetingId: string) {
     if (peerRef.current.has(i)) {
       const existing = peerRef.current.get(i);
       if (existing?.signalingState !== 'closed') return;
@@ -330,7 +330,7 @@ export const Arena = () => {
         type: "add-ice-candidate",
         payload: {
           targetId: i,
-          meetingId: "meetingRoom1",
+          meetingId: meetingId,
           candidate: e.candidate
         }
       }));
@@ -358,7 +358,7 @@ export const Arena = () => {
         type: "offer",
         payload: {
           targetId: i,
-          meetingId: "meetingRoom1",
+          meetingId: meetingId,
           sdp: offer
         }
       }));
@@ -411,7 +411,7 @@ export const Arena = () => {
       wsRef.current?.send(JSON.stringify({
         type: "add-ice-candidate",
         payload: {
-          meetingId: "meetingRoom1",
+          meetingId: message.payload.meetingId,
           targetId: senderId,
           candidate: e.candidate
         }
@@ -433,7 +433,7 @@ export const Arena = () => {
     wsRef.current?.send(JSON.stringify({
       type: "answer",
       payload: {
-        meetingId: "meetingRoom1",
+        meetingId: message.payload.meetingId,
         targetId: senderId,
         sdp: answer
       }
@@ -550,10 +550,11 @@ export const Arena = () => {
         break;
 
       case "init-call":
+        const meetingId = message.payload.meetingId;
         const id = message.payload.id;
         const ids = id.filter((e: string) => e !== currentUser?.userId);
         ids.forEach((i: string) => {
-          sendOffer(i)
+          sendOffer(i, meetingId);
         })
         break;
 
@@ -577,13 +578,14 @@ export const Arena = () => {
   };
 
   const handleMove = (newX: any, newY: any, isSitting: boolean) => {
-
     console.log("inside handle move ")
     if (!currentUser) return;
-    const isInsideRoom = CheckisinsideRoom(newX, newY)
+    const roomId = CheckisinsideRoom(newX, newY)
+    console.log(roomId)
+    console.log("inside room ",InsideRoom)
     checkNearChair(newX, newY)
-    isInsideRoom && getAccess()
-    !isInsideRoom && cleanupConnection()
+    InsideRoom && getAccess()
+    !InsideRoom && cleanupConnection()
 
     wsRef.current.send(JSON.stringify({
       type: 'move',
@@ -592,6 +594,7 @@ export const Arena = () => {
         y: newY,
         userId: currentUser.userId,
         isSitting: isSitting,
+        roomId: roomId
       }
     }));
   };
@@ -937,7 +940,6 @@ export const Arena = () => {
                   <video
                     autoPlay
                     playsInline
-                    muted
                     ref={(el) => { if (el) el.srcObject = stream; }}
                     className="w-full aspect-video bg-gray-100 object-cover rounded-lg border border-gray-200"
                   />

@@ -7,11 +7,12 @@ export class MeetingRoomManager {
     static instance: MeetingRoomManager
 
     constructor() {
-        this.meetingRooms = new Map()
+        this.meetingRooms = new Map();
     }
 
     static getInstance() {
         if (!this.instance) {
+            console.log("creating meetingroommanager")
             this.instance = new MeetingRoomManager()
         }
         return this.instance
@@ -24,9 +25,11 @@ export class MeetingRoomManager {
     }
 
     public createRoom(roomId: string){
+        console.log("creating room")    
         const room = new MeetingRoom(roomId)
         this.meetingRooms.set(roomId, room)
-        return room;
+        const createdroom = this.meetingRooms.get(roomId)
+        return createdroom;
     }
 
     public deleteRoom(roomId: string){
@@ -35,14 +38,13 @@ export class MeetingRoomManager {
     }
 
     public addUser(roomId: string, user: User) {
-        const room = this.meetingRooms.get(roomId);
+        let room = this.meetingRooms.get(roomId);
         if(!room){
-            const room = this.createRoom(roomId)
-            room?.addUser(user);    
-            return;
-        }else{
-            room?.addUser(user);
+            console.log('room not there')
+            room = this.createRoom(roomId)
         }
+        room?.addUser(user);
+        
     }
 
     public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
@@ -73,21 +75,18 @@ export class MeetingRoomManager {
     }
 
     public onIceCandidate(targetId: string, roomId: string, candidate: any, type: string, user: User) {
-    const room = this.meetingRooms.get(roomId);
+        console.log("ON ICE CANDIDATE CALLED IN MANAGER")
+        const room = this.meetingRooms.get(roomId);
         if (!room || !user) return;
 
-        room.onIceCandidate(targetId, candidate,type,user)
+        room.onIceCandidate(targetId, candidate, type, user)
 
     }
 
     public handleUserLeftMeeting(roomId: string, user: User) {
-        const room = this.getRoom(roomId)
-        room?.removeUser(user)
-
-        //TODO: check the users length if it is 0 delete the class and from the map also
-        // const roomlength = room?.getUserLength()
-
-        // if(roomlength == 0) this.deleteRoom(roomId)
+        const room = this.meetingRooms.get(roomId);
+        if (!room) return;
+        room.removeUser(user);
         
     }
 

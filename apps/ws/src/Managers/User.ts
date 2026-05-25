@@ -80,7 +80,7 @@ export class User {
                     break;
 
                 case "move":
-                    console.log('parsedData',parsedData)
+                    // console.log('parsedData',parsedData)
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX);
@@ -121,7 +121,7 @@ export class User {
                     break;
                     
                 case "add-ice-candidate":
-                    console.log("PARSED DATA", parsedData)
+                    // console.log("PARSED DATA", parsedData)
                     MeetingRoomManager.getInstance().onIceCandidate(
                         parsedData.payload.targetId,
                         parsedData.payload.meetingId,
@@ -161,9 +161,8 @@ export class User {
             this,
             this.spaceId!
         )
-        RoomManager.getInstance().removeUser(this.spaceId!, this.userId!)
-        MeetingRoomManager.getInstance().handleUserLeftMeeting("meetingRoom1", this)
+        // RoomManager.getInstance().removeUser(this.spaceId!, this.userId!)
+        // MeetingRoomManager.getInstance().handleUs    erLeftMeeting(, this)
     }
-
 
 }
