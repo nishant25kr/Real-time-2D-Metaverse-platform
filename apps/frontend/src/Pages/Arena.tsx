@@ -38,11 +38,11 @@ export const Arena = () => {
   const [InsideRoom, setInsideRoom] = useState<boolean>(false)
 
   const rooms = [
-    { minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room A" },
-    { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room B" },
-    { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room C" },
-    { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room D" },
-    { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room E" }
+    { minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
+    { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
+    { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
+    { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
+    { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room-E" }
   ];
 
 
@@ -170,8 +170,8 @@ export const Arena = () => {
 
   const furniture: Furniture[] = [
     {
-      room:{ minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room A" },
-      id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6, rotate: 0,
+      room:{ minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
+      id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -186,7 +186,7 @@ export const Arena = () => {
       ]
     },
     {
-      room:{ minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room B" },
+      room:{ minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
       id: 'table-a2', type: 'rect-table', x: 25, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
@@ -200,11 +200,39 @@ export const Arena = () => {
         { dx: 9, dy: 6, rotate: 180, chairId: 7 },
         { dx: 13, dy: 6, rotate: 180, chairId: 8 },
       ]
+    },
+    {
+      room:{ minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
+      id: 'table-a3', type: 'rect-table', x: 47, y: 6, width: 16, height: 6,
+      label: 'Meeting',
+      chairs: [
+        { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+        { dx: 5, dy: -1, rotate: 0, chairId: 2 },
+        { dx: 9, dy: -1, rotate: 0, chairId: 3 },
+        { dx: 13, dy: -1, rotate: 180, chairId: 4 },
+
+        { dx: 1, dy: 6, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 6, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 6, rotate: 180, chairId: 7 },
+        { dx: 13, dy: 6, rotate: 180, chairId: 8 },
+      ]
+    },
+    {
+      room:{ minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
+      id: 'table-a4', type: 'rect-table', x: 4, y: 35, width: 12, height: 6,
+      label: 'Meeting',
+      chairs: [
+        { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+        { dx: 5, dy: -1, rotate: 0, chairId: 2 },
+        { dx: 9, dy: -1, rotate: 0, chairId: 3 },
+
+        { dx: 1, dy: 6, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 6, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 6, rotate: 180, chairId: 7 },
+
+      ]
     }
-    // {
-    //   room:{ minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room C" },
-    // }
-  ];
+  ];  
 
   const cleanupConnection = () => {
     peerRef.current.forEach(pc => pc.close());

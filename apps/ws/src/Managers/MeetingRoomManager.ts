@@ -8,6 +8,12 @@ export class MeetingRoomManager {
 
     constructor() {
         this.meetingRooms = new Map();
+        setInterval(() => {
+            console.log("Current Meeting Rooms and their user counts:")
+            this.meetingRooms.forEach((room, roomId) => {
+                console.log(`Room ID: ${roomId}, User Count: ${room.getUserLength()}`)
+            })
+        }, 2000);
     }
 
     static getInstance() {
@@ -75,7 +81,6 @@ export class MeetingRoomManager {
     }
 
     public onIceCandidate(targetId: string, roomId: string, candidate: any, type: string, user: User) {
-        console.log("ON ICE CANDIDATE CALLED IN MANAGER")
         const room = this.meetingRooms.get(roomId);
         if (!room || !user) return;
 
