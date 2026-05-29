@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
 import { useMyRef } from '../hooks/useMyRef.js'
+const CELL_SIZE = 15;
 
-const CELL_SIZE = 20;
 
 const configuration = {
   iceServers: [
@@ -32,25 +32,27 @@ export const Arena = () => {
   const onMessageRef = useRef<any>(null);
   const [ontheChair, setOntheChair] = useState<boolean>(false)
   const [message, setMessage] = useState<string>("go near chair")
-  const [validCordinates, setValidCordinates] = useState<any>(null as any)
+  const [validCordinates, setValidCordinates] = useState<Map<string, object[]>>(new Map())
   const [invalidCordinates, setInvalidCordinates] = useState<any>(null as any)
   const [lastcordinate, setLastcordinates] = useState<any>({})
   const [InsideRoom, setInsideRoom] = useState<boolean>(false)
+  const [currentRoom, setCurrentRoom] = useState<string>("")
 
   const rooms = [
-    { minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
+    { minX: 2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
     { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
     { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
     { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room-E" }
   ];
 
-
   useEffect(() => {
     setLoading(true)
     if (furniture) {
-      let chairCoordinates: object[] = [];
+      let ctoset: object[] = [];
+      let coordinatesForChair: Map<string, object[]> = new Map()
       furniture.forEach((item) => {
+        let chairCoordinates: object[] = [];
         const px = item.x * CELL_SIZE;
         const py = item.y * CELL_SIZE;
         item.chairs.forEach((chair: any) => {
@@ -63,29 +65,29 @@ export const Arena = () => {
           const cordinate: object = { x: newX, y: newY, chairId: id, direction }
           chairCoordinates.push(cordinate)
         });
-      })
 
-      let ctoset: object[] = [];
-      chairCoordinates.forEach((item) => {
-        const e: any = item
-        const Cordinates: any = e.direction ? [
-          { x: e.x - 1, y: e.y - 1, id: e.chairId },
-          { x: e.x + 1, y: e.y - 1, id: e.chairId },
-          { x: e.x - 1, y: e.y, id: e.chairId },
-          { x: e.x, y: e.y - 1, id: e.chairId },
-          { x: e.x + 1, y: e.y, id: e.chairId },
-        ] : [
-          { x: e.x - 1, y: e.y + 1, id: e.chairId },
-          { x: e.x - 1, y: e.y, id: e.chairId },
-          { x: e.x + 1, y: e.y + 1, id: e.chairId },
-          { x: e.x, y: e.y + 1, id: e.chairId },
-          { x: e.x + 1, y: e.y, id: e.chairId },
-        ]
-        Cordinates.forEach((c: any) => {
-          ctoset.push(c)
+        chairCoordinates.forEach((cordinates) => {
+          const e: any = cordinates
+          const Cordinates: any = e.direction ? [
+            { x: e.x - 1, y: e.y - 1, id: e.chairId },
+            { x: e.x + 1, y: e.y - 1, id: e.chairId },
+            { x: e.x - 1, y: e.y, id: e.chairId },
+            { x: e.x, y: e.y - 1, id: e.chairId },
+            { x: e.x + 1, y: e.y, id: e.chairId },
+          ] : [
+            { x: e.x - 1, y: e.y + 1, id: e.chairId },
+            { x: e.x - 1, y: e.y, id: e.chairId },
+            { x: e.x + 1, y: e.y + 1, id: e.chairId },
+            { x: e.x, y: e.y + 1, id: e.chairId },
+            { x: e.x + 1, y: e.y, id: e.chairId },
+          ]
+          Cordinates.forEach((c: any) => {
+            ctoset.push(c)
+          })
+          coordinatesForChair.set(item.room.name, ctoset)
         })
+        setValidCordinates(coordinatesForChair)
       })
-      setValidCordinates(ctoset)
 
       let invalidCoordinatestoset: object[] = [];
       let obj = {};
@@ -104,10 +106,10 @@ export const Arena = () => {
         const r = item.room
         console.log(r)
         const doors = [
-          { x: (r.minX+r.maxX) / 2, y: r.maxY },
-          { x: (r.minX+r.maxX) / 2 - 1, y: r.maxY },
-          { x: (r.minX+r.maxX) / 2 + 1, y: r.maxY },
-          { x: (r.minX+r.maxX) / 2, y: r.maxY }
+          { x: (r.minX + r.maxX) / 2, y: r.maxY },
+          { x: (r.minX + r.maxX) / 2 - 1, y: r.maxY },
+          { x: (r.minX + r.maxX) / 2 + 1, y: r.maxY },
+          { x: (r.minX + r.maxX) / 2, y: r.maxY }
         ]
         for (let i = 0; i < 20; i++) {
           obj = {
@@ -133,7 +135,7 @@ export const Arena = () => {
         }
         console.log(doors)
       })
-      console.log("invalid moves", invalidCoordinatestoset)
+
       setInvalidCordinates(invalidCoordinatestoset)
 
     }
@@ -170,7 +172,7 @@ export const Arena = () => {
 
   const furniture: Furniture[] = [
     {
-      room:{ minX:2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
+      room: { minX: 2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
       id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
@@ -186,7 +188,7 @@ export const Arena = () => {
       ]
     },
     {
-      room:{ minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
+      room: { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
       id: 'table-a2', type: 'rect-table', x: 25, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
@@ -202,7 +204,7 @@ export const Arena = () => {
       ]
     },
     {
-      room:{ minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
+      room: { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
       id: 'table-a3', type: 'rect-table', x: 47, y: 6, width: 16, height: 6,
       label: 'Meeting',
       chairs: [
@@ -218,7 +220,7 @@ export const Arena = () => {
       ]
     },
     {
-      room:{ minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
+      room: { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
       id: 'table-a4', type: 'rect-table', x: 4, y: 35, width: 12, height: 6,
       label: 'Meeting',
       chairs: [
@@ -232,7 +234,7 @@ export const Arena = () => {
 
       ]
     }
-  ];  
+  ];
 
   const cleanupConnection = () => {
     peerRef.current.forEach(pc => pc.close());
@@ -291,40 +293,51 @@ export const Arena = () => {
     }
   }
 
-  async function checkNearChair(x: any, y: any) {
-    validCordinates.forEach((c: any) => {
+  function findNearbyChair(x: any, y: any, roomId: string):  [number, number]  {
+    let chairId: number = 0;
+    const coordinates = validCordinates.get(roomId)
+    if (!coordinates) console.log("no room found")
+    console.log("coordinates", coordinates)
+
+    coordinates?.forEach((c: any) => {
       if (c.x == x && c.y == y) {
         setMessage("cmd+I to sit in chair")
         setPossibleChairToSit(c.id)
+        console.log("you coor", x, y, "and chair Id ", c.id)
+        chairId = c.id
 
-      } else {
-        setMessage("go near chair")
-        if (possibleChairToSit != 0) {
-          setPossibleChairToSit(0)
-        }
-        setCurrentUser((prev: any) => {
-          if (prev.message) {
-            const { message, ...rest } = prev;
-            return rest;
-          }
-          return prev;
-        })
       }
+    })
+    
+    let dx: number | undefined;
+    let dy: number | undefined;
+    for (const item of furniture) {
+      const px = item.x * CELL_SIZE;
+      const py = item.y * CELL_SIZE;
+
+      if (item.room.name === currentRoom) {
+        const chair = item.chairs.find(c => c.chairId === chairId)
+        if (chair) {
+          const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
+          const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
+          dx = Math.floor(cx / CELL_SIZE) + 1;
+          dy = Math.floor(cy / CELL_SIZE) + 1;
+          break
+        }
+      }
+
     }
-    )
+    return [dx,dy]
+    // return chairId;
   }
 
-  function CheckisinsideRoom(x: any, y: any) { 
-    let roomId; 
+  function CheckisinsideRoom(x: number, y: number) {
     furniture.forEach((e) => {
-      if(x >= e.room.minX && x <= e.room.maxX && y >= e.room.minY && y <= e.room.maxY){
-        // console.log("roomId inside",e.room.name)
+      if (x >= e.room.minX && x <= e.room.maxX && y >= e.room.minY && y <= e.room.maxY) {
         setInsideRoom(true)
-        roomId = e.room.name
-      } 
+        setCurrentRoom(e.room.name)
+      }
     })
-    // console.log("roomId",roomId)
-    return roomId;
   }
 
   async function sendOffer(i: string, meetingId: string) {
@@ -607,11 +620,9 @@ export const Arena = () => {
 
   const handleMove = (newX: any, newY: any, isSitting: boolean) => {
     console.log("inside handle move ")
+
     if (!currentUser) return;
-    const roomId = CheckisinsideRoom(newX, newY)
-    console.log(roomId)
-    console.log("inside room ",InsideRoom)
-    checkNearChair(newX, newY)
+    CheckisinsideRoom(newX, newY)
     InsideRoom && getAccess()
     !InsideRoom && cleanupConnection()
 
@@ -622,7 +633,7 @@ export const Arena = () => {
         y: newY,
         userId: currentUser.userId,
         isSitting: isSitting,
-        roomId: roomId
+        roomId: currentRoom
       }
     }));
   };
@@ -718,7 +729,7 @@ export const Arena = () => {
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 13;
       ctx.stroke();
-      ctx.clearRect((startX + width / 2 - 20)-10, startY + height - 7, 60, 20);
+      ctx.clearRect((startX + width / 2 - 20) - 10, startY + height - 7, 60, 20);
 
     });
 
@@ -749,7 +760,6 @@ export const Arena = () => {
     });
 
   }, [currentUser, users]);
-
 
   function storeLastMove() {
     const lastMove = {
@@ -789,26 +799,15 @@ export const Arena = () => {
     if (ontheChair) return
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
-
-      if (possibleChairToSit) {
-        furniture[0].chairs.forEach((e) => {
-          if (e.chairId === possibleChairToSit) {
-            const px = 4 * CELL_SIZE;
-            const py = 6 * CELL_SIZE;
-            const cx = px + e.dx * CELL_SIZE + CELL_SIZE / 2;
-            const cy = py + e.dy * CELL_SIZE + CELL_SIZE / 2;
-            const x = Math.floor(cx / CELL_SIZE) + 1;
-            const y = Math.floor(cy / CELL_SIZE) + 1;
-            storeLastMove()
-            console.log(x,y)
-            // checkValidMove(x, y)
-            setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
-            setOntheChair(true)
-            handleMove(x, y, true)
-          }
-        })
+      if (InsideRoom) {
+        console.log("roomId", currentRoom)
+        const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom)
+        setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
+        handleMove(x, y, true)
       }
     }
+
+    storeLastMove()
 
     switch (e.key) {
       case 'ArrowUp':
@@ -828,7 +827,7 @@ export const Arena = () => {
         break;
 
       case 'ArrowDown':
-        storeLastMove()
+
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y + 1;
@@ -845,7 +844,7 @@ export const Arena = () => {
 
       case 'ArrowLeft':
 
-        storeLastMove()
+
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x - 1;
@@ -862,7 +861,7 @@ export const Arena = () => {
         break;
 
       case 'ArrowRight':
-        storeLastMove()
+
         setCurrentUser((prev: any) => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x + 1;
@@ -882,10 +881,10 @@ export const Arena = () => {
   useEffect(() => {
     if (localVideoRef.current && localVideoTrack) {
       const stream = new MediaStream([localVideoTrack]);
-        localVideoRef.current.srcObject = stream;
-        localVideoRef.current.play().catch(() => { });
-      }
-    }, [localVideoTrack]);
+      localVideoRef.current.srcObject = stream;
+      localVideoRef.current.play().catch(() => { });
+    }
+  }, [localVideoTrack]);
 
 
   if (loading) {
