@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
 import { useMyRef } from '../hooks/useMyRef.js'
-const CELL_SIZE = 15;
+const CELL_SIZE = 20;
 
 
 const configuration = {
@@ -16,9 +16,7 @@ export const Arena = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const canvasRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({} as any);
-  const [users, setUsers] = useState(new Map());
-  // const [chairCordinates, setChairCordinates] = useState<object[]>([])
-  const [possibleChairToSit, setPossibleChairToSit] = useState<number>(0)
+  const [users, setUsers] = useState(new Map());  
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
   const peerRef = useRef(new Map<string, RTCPeerConnection>())
@@ -293,42 +291,42 @@ export const Arena = () => {
     }
   }
 
-  function findNearbyChair(x: any, y: any, roomId: string):  [number, number]  {
-    let chairId: number = 0;
-    const coordinates = validCordinates.get(roomId)
-    if (!coordinates) console.log("no room found")
-    console.log("coordinates", coordinates)
+  function findNearbyChair(x: any, y: any, roomId: string):  [number | undefined, number | undefined]  {
+    let chairId: number | null = null;
+    const coordinates = validCordinates.get(roomId);
 
-    coordinates?.forEach((c: any) => {
-      if (c.x == x && c.y == y) {
-        setMessage("cmd+I to sit in chair")
-        setPossibleChairToSit(c.id)
-        console.log("you coor", x, y, "and chair Id ", c.id)
-        chairId = c.id
+    if (!coordinates) {
+      console.log("no room found", roomId);
+      setMessage("go near chair");
+      return [undefined, undefined];
+    }
 
+    coordinates.forEach((c: any) => {
+      if (c.x === x && c.y === y) {
+        setMessage("cmd+I to sit in chair");
+        console.log("you coor", x, y, "and chair Id ", c.id);
+        chairId = c.id;
       }
-    })
-    
-    let dx: number | undefined;
-    let dy: number | undefined;
+    });
+
+    if (chairId === null) {
+      setMessage("go near chair");
+      return [undefined, undefined];
+    }
+
     for (const item of furniture) {
+      if (item.room.name !== currentRoom) continue;
       const px = item.x * CELL_SIZE;
       const py = item.y * CELL_SIZE;
-
-      if (item.room.name === currentRoom) {
-        const chair = item.chairs.find(c => c.chairId === chairId)
-        if (chair) {
-          const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
-          const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
-          dx = Math.floor(cx / CELL_SIZE) + 1;
-          dy = Math.floor(cy / CELL_SIZE) + 1;
-          break
-        }
-      }
-
+      const chair = item.chairs.find(c => c.chairId === chairId);
+      if (!chair) continue;
+      const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
+      const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
+      return [Math.floor(cx / CELL_SIZE) + 1, Math.floor(cy / CELL_SIZE) + 1];
     }
-    return [dx,dy]
-    // return chairId;
+
+    setMessage("go near chair");
+    return [undefined, undefined];
   }
 
   function CheckisinsideRoom(x: number, y: number) {
@@ -800,10 +798,14 @@ export const Arena = () => {
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (InsideRoom) {
-        console.log("roomId", currentRoom)
-        const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom)
-        setCurrentUser((prev: any) => ({ ...prev, x: x, y: y }))
-        handleMove(x, y, true)
+        console.log("roomId", currentRoom);
+        const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom);
+        if (x === undefined || y === undefined) {
+          return;
+        }
+        setCurrentUser((prev: any) => ({ ...prev, x, y }));
+        setOntheChair(true);
+        handleMove(x, y, true);
       }
     }
 
