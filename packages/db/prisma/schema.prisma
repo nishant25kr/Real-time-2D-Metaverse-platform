@@ -20,12 +20,11 @@ model User {
 model Space {
   id        String          @id @unique @default(cuid())
   name      String
-  width     String
-  height    String
   thumbnail String?
   creatorId String
   creator   User            @relation(fields: [creatorId], references: [id])
   elements  spaceElements[]
+  passcode  String
 }
 
 model spaceElements {

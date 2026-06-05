@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
 import { useMyRef } from '../hooks/useMyRef.js'
+import axios from 'axios';
 const CELL_SIZE = 20;
 
 
@@ -46,6 +47,12 @@ export const Arena = () => {
 
   useEffect(() => {
     setLoading(true)
+    
+    const res: any = axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/:spaceId/:passcode}`
+    )
+    if(res) alert("hello")
+
     if (furniture) {
       let ctoset: object[] = [];
       let coordinatesForChair: Map<string, object[]> = new Map()

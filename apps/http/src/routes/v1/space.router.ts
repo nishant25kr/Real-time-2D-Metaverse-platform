@@ -19,50 +19,23 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
             message: "User not found"
         })
     }
-
-    if (!parsedData.data.mapId) {
-        const space = await client.space.create({
-            data: {
-                name: parsedData.data.name,
-                width: parsedData.data.width,
-                height: parsedData.data.height,
-                creatorId: req.userId!
-            }
-        });
-        res.json({ spaceId: space.id })
-        return;
-    }
-    const map = await client.map.findFirst({
-        where: {
-            id: parsedData.data.mapId
-        }, select: {
-            mapElements: true,
-            width: true,
-            height: true
-        }
-    })
-    if (!map) {
-        res.status(400).json({ message: "Map not found" })
-        return
-    }
     let space = await client.$transaction(async () => {
         const space = await client.space.create({
             data: {
                 name: parsedData.data.name,
-                width: map.width.toString(),
-                height: map.height.toString(),
                 creatorId: req.userId!,
+                passcode: parsedData.data.passcode
             }
         });
 
-        await client.spaceElements.createMany({
-            data: map.mapElements.map((e: any) => ({
-                spaceId: space.id,
-                elementId: e.elementId,
-                x: e.x!,
-                y: e.y!
-            }))
-        })
+        // await client.spaceElements.createMany({
+        //     data: map.mapElements.map((e: any) => ({
+        //         spaceId: space.id,
+        //         elementId: e.elementId,
+        //         x: e.x!,
+        //         y: e.y!
+        //     }))
+        // })
 
         return space;
 
@@ -203,8 +176,9 @@ spaceRouter.post("/element", userMiddleware, async (req, res) => {
     })
 })
 
-spaceRouter.get("/:spaceId", async (req, res) => {
+spaceRouter.get("/:spaceId/:passcode", async (req, res) => {
     const spaceId = req.params.spaceId as string;
+    const passcode = req.params.passcode as string;
     if (!spaceId) {
         return res.status(400).json({
             message: "no spaceId"
@@ -212,20 +186,21 @@ spaceRouter.get("/:spaceId", async (req, res) => {
     }
     const space = await client.space.findUnique({
         where: {
-            id: spaceId
+            id: spaceId,
+            passcode: passcode
         }
     });
-    const element = await client.spaceElements.findMany({
-        where: {
-            spaceId: spaceId
-        }
-    })
     if (!space) {
         return res.status(400).json({
             message: "Invalid id"
         })
     }
-
+    const element = await client.spaceElements.findMany({
+        where: {
+            spaceId: spaceId
+        }
+    })
+    
     return res.status(200).json({
         space: space,
         element: element

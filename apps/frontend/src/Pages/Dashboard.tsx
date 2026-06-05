@@ -108,7 +108,7 @@ export const Dashboard = () => {
                                     <p className="font-medium text-gray-900 text-sm group-hover:text-gray-700">{item.name}</p>
                                     <p className="text-xs text-gray-400 mt-1">{item.dimension ?? "Dimensions not set"}</p>
                                 </div>
-                            ))}
+                            ))} 
                         </div>
                     )}
                 </div>
