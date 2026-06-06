@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom"
 
 export const Dashboard = () => {
     const [loading, setLoading] = useState<boolean>(true)
+    const [validatingSpaceId, setValidatingSpaceId] = useState<string | null>(null)
+    const [passcodeMessages, setPasscodeMessages] = useState<Record<string, string>>({})
     const [spaces, setSpaces] = useState<any[]>([])
     const [name, setName] = useState<string>("")
-    const [width, setWidth] = useState<string>("")
-    const [height, setHeight] = useState<string>("")
-    const [mapId, setMapId] = useState<string>("")
+    const [passcode, setPasscode] = useState<string>("")
+    const [spacePasscodes, setSpacePasscodes] = useState<Record<string, string>>({})
     const [creating, setCreating] = useState<boolean>(false)
     const [error, setError] = useState<string>("")
     const [formError, setFormError] = useState<string>("")
@@ -39,7 +40,7 @@ export const Dashboard = () => {
     }
 
     async function HandleSubmit() {
-        if (!name || !width || !height || !mapId) {
+        if (!name || !passcode) {
             setFormError("All fields are required.")
             return
         }
@@ -48,15 +49,55 @@ export const Dashboard = () => {
             setFormError("")
             await axios.post(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/space`,
-                { name, width, height, mapId },
+                { name, passcode },
                 { headers: { authorization: `Bearer ${localStorage.getItem("token")}` } }
             )
-            setName(""); setWidth(""); setHeight(""); setMapId("")
+            setName("");
+            setPasscode("");
             fetchSpace()
         } catch {
             setFormError("Failed to create space.")
         } finally {
             setCreating(false)
+        }
+    }
+
+    async function fetchSpaceWithId(spaceId: string) {
+        const spacePasscode = spacePasscodes[spaceId] || ""
+        if (!spacePasscode) {
+            setPasscodeMessages(prev => ({
+                ...prev,
+                [spaceId]: "Passcode is required."
+            }))
+            return
+        }
+
+        setValidatingSpaceId(spaceId)
+        setPasscodeMessages(prev => ({
+            ...prev,
+            [spaceId]: ""
+        }))
+
+        try {
+            const res = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/api/v1/space/${spaceId}/${spacePasscode}`
+            )
+
+            if (res.status === 200) {
+                navigate(`/space/?spaceId=${spaceId}&passcode=${spacePasscode}&token=${localStorage.getItem("token")}`)
+            } else {
+                setPasscodeMessages(prev => ({
+                    ...prev,
+                    [spaceId]: "Invalid passcode."
+                }))
+            }
+        } catch {
+            setPasscodeMessages(prev => ({
+                ...prev,
+                [spaceId]: "Invalid passcode."
+            }))
+        } finally {
+            setValidatingSpaceId(null)
         }
     }
 
@@ -99,16 +140,46 @@ export const Dashboard = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {spaces.map((item) => (
-                                <div
-                                    key={item.id}
-                                    onClick={() => navigate(`/space/?spaceId=${item.id}&token=${localStorage.getItem("token")}`)}
-                                    className="border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-gray-400 hover:shadow-sm transition-all group"
-                                >
-                                    <p className="font-medium text-gray-900 text-sm group-hover:text-gray-700">{item.name}</p>
-                                    <p className="text-xs text-gray-400 mt-1">{item.dimension ?? "Dimensions not set"}</p>
-                                </div>
-                            ))} 
+                            {spaces.map((item) => {
+                                const isValidating = validatingSpaceId === item.id
+                                const message = passcodeMessages[item.id] || ""
+
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="border border-gray-200 rounded-lg p-4 transition-all"
+                                    >
+                                        <p className="font-medium text-gray-900 text-sm mb-3">{item.name}</p>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter passcode"
+                                            value={spacePasscodes[item.id] || ""}
+                                            onChange={(e) => setSpacePasscodes(prev => ({
+                                                ...prev,
+                                                [item.id]: e.target.value
+                                            }))}
+                                            className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors mb-3"
+                                        />
+                                        <button
+                                            onClick={() => fetchSpaceWithId(item.id)}
+                                            disabled={isValidating}
+                                            className="w-full bg-gray-900 text-white rounded-md px-4 py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {isValidating ? (
+                                                <span className="flex items-center justify-center gap-2">
+                                                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                                                    Checking...
+                                                </span>
+                                            ) : (
+                                                'Join'
+                                            )}
+                                        </button>
+                                        {message && (
+                                            <p className="mt-3 text-sm text-red-500">{message}</p>
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
                     )}
                 </div>
@@ -126,24 +197,10 @@ export const Dashboard = () => {
                         />
                         <input
                             type="text"
-                            placeholder="Map ID"
+                            placeholder="Passcode"
                             className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
-                            value={mapId}
-                            onChange={(e) => setMapId(e.target.value)}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Width (e.g. 100)"
-                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
-                            value={width}
-                            onChange={(e) => setWidth(e.target.value)}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Height (e.g. 100)"
-                            className="border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
-                            value={height}
-                            onChange={(e) => setHeight(e.target.value)}
+                            value={passcode}
+                            onChange={(e) => setPasscode(e.target.value)}
                         />
                     </div>
 

@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { AddElementSchema, AddSpaceElement, CreateSpaceSchema, DeleteElementSchema, DeleteSpaceSchema } from "../../types/index.js";
+import { 
+    AddSpaceElement, 
+    CreateSpaceSchema, 
+    DeleteElementSchema, 
+    DeleteSpaceSchema 
+} from "../../types/index.js";
 import client from "@repo/db"
 import { userMiddleware } from "../../middlewares/user.js";
 
@@ -19,7 +24,7 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
             message: "User not found"
         })
     }
-    let space = await client.$transaction(async () => {
+    // let space = await client.$transaction(async () => {
         const space = await client.space.create({
             data: {
                 name: parsedData.data.name,
@@ -28,18 +33,10 @@ spaceRouter.post("/", userMiddleware, async (req, res) => {
             }
         });
 
-        // await client.spaceElements.createMany({
-        //     data: map.mapElements.map((e: any) => ({
-        //         spaceId: space.id,
-        //         elementId: e.elementId,
-        //         x: e.x!,
-        //         y: e.y!
-        //     }))
-        // })
+        
+        // return space;
 
-        return space;
-
-    })
+    // })
     res.json({ spaceId: space.id })
 
 
@@ -121,7 +118,6 @@ spaceRouter.delete("/:spaceId", userMiddleware, async (req, res) => {
 });
 
 spaceRouter.get("/all", async (req, res) => {
-    console.log("hello from all space")
     const spaces = await client.space.findMany()
     console.log('spaces', spaces)
     if (!spaces) {
@@ -179,6 +175,7 @@ spaceRouter.post("/element", userMiddleware, async (req, res) => {
 spaceRouter.get("/:spaceId/:passcode", async (req, res) => {
     const spaceId = req.params.spaceId as string;
     const passcode = req.params.passcode as string;
+    console.log(spaceId, passcode)
     if (!spaceId) {
         return res.status(400).json({
             message: "no spaceId"
@@ -190,19 +187,17 @@ spaceRouter.get("/:spaceId/:passcode", async (req, res) => {
             passcode: passcode
         }
     });
+
+    console.log(space)
+
     if (!space) {
         return res.status(400).json({
             message: "Invalid id"
         })
     }
-    const element = await client.spaceElements.findMany({
-        where: {
-            spaceId: spaceId
-        }
-    })
+    
     
     return res.status(200).json({
         space: space,
-        element: element
     })
 })

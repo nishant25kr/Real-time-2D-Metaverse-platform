@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
 import { useMyRef } from '../hooks/useMyRef.js'
-import axios from 'axios';
 const CELL_SIZE = 20;
-
 
 const configuration = {
   iceServers: [
@@ -17,7 +15,7 @@ export const Arena = () => {
   const [loading, setLoading] = useState<boolean>(false)
   const canvasRef = useRef<any>(null);
   const [currentUser, setCurrentUser] = useState<any>({} as any);
-  const [users, setUsers] = useState(new Map());  
+  const [users, setUsers] = useState(new Map());
   const [localVideoTrack, setLocalVideoTrack] = useState<MediaStreamTrack>()
   const [localAudioTrack, setLocalAudioTrack] = useState<MediaStreamTrack>()
   const peerRef = useRef(new Map<string, RTCPeerConnection>())
@@ -45,13 +43,13 @@ export const Arena = () => {
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room-E" }
   ];
 
+  
+
   useEffect(() => {
-    setLoading(true)
-    
-    const res: any = axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/:spaceId/:passcode}`
-    )
-    if(res) alert("hello")
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token') || '';
+    const spaceId = urlParams.get('spaceId') || '';
 
     if (furniture) {
       let ctoset: object[] = [];
@@ -109,7 +107,6 @@ export const Arena = () => {
 
       furniture.forEach((item) => {
         const r = item.room
-        console.log(r)
         const doors = [
           { x: (r.minX + r.maxX) / 2, y: r.maxY },
           { x: (r.minX + r.maxX) / 2 - 1, y: r.maxY },
@@ -138,16 +135,12 @@ export const Arena = () => {
           }
           addInVariable(obj, doors)
         }
-        console.log(doors)
       })
 
       setInvalidCordinates(invalidCoordinatestoset)
 
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token') || '';
-    const spaceId = urlParams.get('spaceId') || '';
 
     wsRef.current = new WebSocket('ws://localhost:8080/');
 
@@ -298,12 +291,11 @@ export const Arena = () => {
     }
   }
 
-  function findNearbyChair(x: any, y: any, roomId: string):  [number | undefined, number | undefined]  {
+  function findNearbyChair(x: any, y: any, roomId: string): [number | undefined, number | undefined] {
     let chairId: number | null = null;
     const coordinates = validCordinates.get(roomId);
 
     if (!coordinates) {
-      console.log("no room found", roomId);
       setMessage("go near chair");
       return [undefined, undefined];
     }
@@ -311,7 +303,6 @@ export const Arena = () => {
     coordinates.forEach((c: any) => {
       if (c.x === x && c.y === y) {
         setMessage("cmd+I to sit in chair");
-        console.log("you coor", x, y, "and chair Id ", c.id);
         chairId = c.id;
       }
     });
@@ -624,7 +615,6 @@ export const Arena = () => {
   };
 
   const handleMove = (newX: any, newY: any, isSitting: boolean) => {
-    console.log("inside handle move ")
 
     if (!currentUser) return;
     CheckisinsideRoom(newX, newY)
@@ -805,7 +795,6 @@ export const Arena = () => {
 
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (InsideRoom) {
-        console.log("roomId", currentRoom);
         const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom);
         if (x === undefined || y === undefined) {
           return;
@@ -825,9 +814,8 @@ export const Arena = () => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y - 1;
           const res: boolean = checkValidMove(prev.x, newY)
-          console.log(res)
           if (!res) {
-            console.log("!res")
+
             return { ...prev }
           }
           handleMove(prev.x, newY, false);
@@ -841,9 +829,7 @@ export const Arena = () => {
           if (!prev || prev.x === undefined) return prev;
           const newY = prev.y + 1;
           const res: boolean = checkValidMove(prev.x, newY)
-          console.log(res)
           if (!res) {
-            console.log("!res")
             return { ...prev }
           }
           handleMove(prev.x, newY, false);
@@ -859,9 +845,7 @@ export const Arena = () => {
           const newX = prev.x - 1;
 
           const res: boolean = checkValidMove(newX, prev.y)
-          console.log(res)
           if (!res) {
-            console.log("!res")
             return { ...prev }
           }
           handleMove(newX, prev.y, false);
@@ -875,9 +859,7 @@ export const Arena = () => {
           if (!prev || prev.x === undefined) return prev;
           const newX = prev.x + 1;
           const res: boolean = checkValidMove(newX, prev.y)
-          console.log(res)
           if (!res) {
-            console.log("!res")
             return { ...prev }
           }
           handleMove(newX, prev.y, false);
