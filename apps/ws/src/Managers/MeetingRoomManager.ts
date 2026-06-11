@@ -1,19 +1,18 @@
-import type { OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
 import { MeetingRoom } from "./MeetingRoom.js";
+import { RoomManager } from "./RoomManagers.js";
 
 export class MeetingRoomManager {
-    meetingRooms: Map<string, MeetingRoom> = new Map()
+    // meetingRooms: Map<string, MeetingRoom> = new Map()
+    meetingRooms: Map<string, Map<string, MeetingRoom> > = new Map()
     static instance: MeetingRoomManager
 
-    constructor() {
+    constructor() {   
         this.meetingRooms = new Map();
-        // setInterval(() => {
-        //     console.log("Current Meeting Rooms and their user counts:")
-        //     this.meetingRooms.forEach((room, roomId) => {
-        //         console.log(`Room ID: ${roomId}, User Count: ${room.getUserLength()}`)
-        //     })
-        // }, 2000);
+        setInterval(() => {
+            console.log("Current Meeting Rooms and their user counts:")
+            console.log(this.meetingRooms)
+        }, 2000);
     }
 
     static getInstance() {
@@ -30,45 +29,45 @@ export class MeetingRoomManager {
         return room;
     }
 
-    public createRoom(roomId: string){
-        console.log("creating room")    
+    public createRoom(spaceId: string, roomId: string){
+        if(!this.meetingRooms.has(spaceId)){
+            this.meetingRooms.set(spaceId, new Map())
+        }
         const room = new MeetingRoom(roomId)
-        this.meetingRooms.set(roomId, room)
-        const createdroom = this.meetingRooms.get(roomId)
-        if(!createdroom) return;
-        return createdroom;
+        this.meetingRooms.get(spaceId)?.set(roomId, room)
+        return room;
     }
 
-    public deleteRoom(roomId: string){
-        this.meetingRooms.delete(roomId)
-
+    public deleteRoom(spaceId: string, roomId: string){
+        this.meetingRooms.get(spaceId)?.delete(roomId)
     }
 
     public addUser(roomId: string, user: User) {
-        let room = this.meetingRooms.get(roomId);
+
+        let room = this.meetingRooms.get(user.spaceId ?? "")?.get(roomId)
         if(!room){
             console.log('room not there')
-            room = this.createRoom(roomId)
+            room = this.createRoom(user.spaceId ?? "", roomId)
         }
         room?.addUser(user);
         
     }
 
     public onOffer(targetId: string, roomId: string, sdp: any, user: User) {
-        const room = this.meetingRooms.get(roomId);
+        const room = this.meetingRooms.get(user.spaceId ?? "")?.get(roomId);
         if (!room) return;
         room?.onOffer(targetId, sdp, user)
     }
 
     public onAnswer(targetId: string, roomId: string, sdp: any, user: User) {
-        const room = this.meetingRooms.get(roomId)
+        const room = this.meetingRooms.get(user.spaceId ?? "")?.get(roomId)
         if(!room) return;
 
         room.onAnswer(targetId, sdp, user)
     }
 
     public onIceCandidate(targetId: string, roomId: string, candidate: any, type: string, user: User) {
-        const room = this.meetingRooms.get(roomId);
+        const room = this.meetingRooms.get(user.spaceId ?? "")?.get(roomId);
         if (!room || !user) return;
 
         room.onIceCandidate(targetId, candidate, type, user)
@@ -77,7 +76,7 @@ export class MeetingRoomManager {
 
     public handleUserLeftMeeting(roomId: string, user: User) {
         console.log("handling user left meeting")
-        const room = this.meetingRooms.get(roomId);
+        const room = this.meetingRooms.get(user.spaceId ?? "")?.get(roomId);
         if (!room) return;
         room.removeUser(user);
         
