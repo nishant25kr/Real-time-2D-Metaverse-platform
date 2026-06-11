@@ -8,12 +8,12 @@ export class MeetingRoomManager {
 
     constructor() {
         this.meetingRooms = new Map();
-        setInterval(() => {
-            console.log("Current Meeting Rooms and their user counts:")
-            this.meetingRooms.forEach((room, roomId) => {
-                console.log(`Room ID: ${roomId}, User Count: ${room.getUserLength()}`)
-            })
-        }, 2000);
+        // setInterval(() => {
+        //     console.log("Current Meeting Rooms and their user counts:")
+        //     this.meetingRooms.forEach((room, roomId) => {
+        //         console.log(`Room ID: ${roomId}, User Count: ${room.getUserLength()}`)
+        //     })
+        // }, 2000);
     }
 
     static getInstance() {
@@ -35,6 +35,7 @@ export class MeetingRoomManager {
         const room = new MeetingRoom(roomId)
         this.meetingRooms.set(roomId, room)
         const createdroom = this.meetingRooms.get(roomId)
+        if(!createdroom) return;
         return createdroom;
     }
 
@@ -51,20 +52,6 @@ export class MeetingRoomManager {
         }
         room?.addUser(user);
         
-    }
-
-    public broadcast(message: OutgoingMessage, user: User, meetingId: string) {
-        // if (!this.meetingRoom.get(meetingId)?.find(u => u === user)) return
-        // this.meetingRoom.get(meetingId)?.forEach((e) => {
-        //     if (e.id !== user.id) {
-        //         e.ws.send(
-        //             JSON.stringify(message)
-        //         )
-        //     }
-        // })
-        
-
-
     }
 
     public onOffer(targetId: string, roomId: string, sdp: any, user: User) {
@@ -89,6 +76,7 @@ export class MeetingRoomManager {
     }
 
     public handleUserLeftMeeting(roomId: string, user: User) {
+        console.log("handling user left meeting")
         const room = this.meetingRooms.get(roomId);
         if (!room) return;
         room.removeUser(user);

@@ -1,4 +1,5 @@
 import type { OutgoingMessage } from "../types.js";
+import type { MeetingRoomManager } from "./MeetingRoomManager.js";
 import type { User } from "./User.js";
 
 export class RoomManager {
@@ -36,7 +37,6 @@ export class RoomManager {
             }
         })
     }
-
     public removeUser(spaceId: string, userId: string) {
         if (!this.rooms.has(spaceId)) {
             return;

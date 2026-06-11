@@ -2,7 +2,6 @@ import type { OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
 import { string } from "zod";
 
-
 export class MeetingRoom{
     public roomId: string;
     private users : User[];
@@ -63,9 +62,8 @@ export class MeetingRoom{
     }
 
     public onOffer(targetId: string, sdp: any, user: User){
-        
         this.users.forEach(u => {
-            if (targetId === u.userId) {
+            if (u.userId === targetId) {
                 u.ws.send(
                     JSON.stringify({
                         type: "offer",

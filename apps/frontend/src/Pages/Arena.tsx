@@ -43,13 +43,12 @@ export const Arena = () => {
     { minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room-E" }
   ];
 
-  
-
   useEffect(() => {
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
+    const passcode = urlParams.get('passcode') || '';
 
     if (furniture) {
       let ctoset: object[] = [];
@@ -141,7 +140,6 @@ export const Arena = () => {
 
     }
 
-
     wsRef.current = new WebSocket('ws://localhost:8080/');
 
     wsRef.current.onopen = () => {
@@ -149,7 +147,8 @@ export const Arena = () => {
         type: 'join',
         payload: {
           spaceId,
-          token
+          token,
+          passcode
         }
       }));
     };
@@ -791,8 +790,8 @@ export const Arena = () => {
       }
     }
 
-    if (ontheChair) return
-
+    if (ontheChair) return;
+     
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (InsideRoom) {
         const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom);

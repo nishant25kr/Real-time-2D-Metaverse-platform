@@ -22,8 +22,8 @@ export class User {
     public userId?: string
     constructor(public ws: WebSocket) {
         this.id = getRandomId(10);
-        this.x = 0;
-        this.y = 0;
+        this.x = 25;
+        this.y = 25;
         this.initHandler();
     }
 
@@ -34,6 +34,7 @@ export class User {
                 case "join":
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
+                    const passcode = parsedData.payload.passcode
                     const user = jwt.verify(token, JWT_PASSWORD)
                     const id = this.userId = (user as jwt.JwtPayload).userId;
                     if (!id) {
@@ -42,17 +43,17 @@ export class User {
                     }
                     const space = await client.space.findUnique({
                         where:{
-                            id: spaceID
+                            id: spaceID,
+                            passcode: passcode
                         }
                     })
                     if (!space) {
+                        console.log("space not found")
                         this.ws.close();
                         return;
                     }
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    this.x = Number(space?.width!)
-                    this.y = Number(space?.height!)
                     const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
                     this.ws.send(JSON.stringify({
                         type: "space-joined",
@@ -103,6 +104,7 @@ export class User {
                         );
                         
                         if(parsedData.payload.isSitting){
+                            console.log("Adding user to meeting room")
                             MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
                             
                         } else {
