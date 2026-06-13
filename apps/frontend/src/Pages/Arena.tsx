@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Furniture } from '../types';
-import { useMyRef } from '../hooks/useMyRef.js'
+import { useMyRef } from '../hooks/useMyRef';
 const CELL_SIZE = 20;
 
 const configuration = {
@@ -44,7 +44,6 @@ export const Arena = () => {
   ];
 
   useEffect(() => {
-
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || '';
     const spaceId = urlParams.get('spaceId') || '';
@@ -94,7 +93,7 @@ export const Arena = () => {
       let invalidCoordinatestoset: object[] = [];
       let obj = {};
 
-      function addInVariable(obj: object, doors: object[]) {
+      function addInVariable(obj: any, doors: object[]) {
         let temp: boolean = true;
         doors.forEach((item: any) => {
           if (item.x == obj.x && item.y == obj.y) temp = false;
@@ -107,32 +106,63 @@ export const Arena = () => {
       furniture.forEach((item) => {
         const r = item.room
         const doors = [
-          { x: (r.minX + r.maxX) / 2, y: r.maxY },
-          { x: (r.minX + r.maxX) / 2 - 1, y: r.maxY },
-          { x: (r.minX + r.maxX) / 2 + 1, y: r.maxY },
-          { x: (r.minX + r.maxX) / 2, y: r.maxY }
+          r.rotate === 0 ? { x: (r.minX + r.maxX) / 2, y: r.maxY } : { x: (r.minX + r.maxX) / 2, y: r.minY },
+          r.rotate === 0 ? { x: (r.minX + r.maxX) / 2 - 1, y: r.maxY } : { x: (r.minX + r.maxX) / 2 - 1, y: r.minY },
+          r.rotate === 0 ? { x: (r.minX + r.maxX) / 2 + 1, y: r.maxY } : { x: (r.minX + r.maxX) / 2 + 1, y: r.minY },
+          r.rotate === 0 ? { x: (r.minX + r.maxX) / 2, y: r.maxY } : { x: (r.minX + r.maxX) / 2, y: r.minY }
         ]
-        for (let i = 0; i < 20; i++) {
-          obj = {
-            x: r.minX,
-            y: r.minY + i
+        if (r.rotate === 0) {
+          for (let i = 0; i < 20; i++) {
+            obj = {
+              x: r.minX,
+              y: r.minY + i
+            }
+            addInVariable(obj, doors)
+            obj = {
+              x: r.minX + i,
+              y: r.minY
+            }
+            addInVariable(obj, doors)
+            obj = {
+              x: r.maxX,
+              y: r.minY + i
+            }
+            addInVariable(obj, doors)
+            obj = {
+              x: r.minX + i,
+              y: r.maxY
+            }
+            addInVariable(obj, doors)
           }
-          addInVariable(obj, doors)
-          obj = {
-            x: r.minX + i,
-            y: r.minY
+        } else {
+          console.log(doors)
+          for (let i = 0; i < 20; i++) {
+            obj = {
+              x: r.minX + i,
+              y: r.minY
+            }
+            console.log("obj1", obj)
+            addInVariable(obj, doors)
+            obj = {
+              x: r.minX + i,
+              y: r.maxY
+            }
+            // console.log("obj1", obj)
+            addInVariable(obj, doors)
           }
-          addInVariable(obj, doors)
-          obj = {
-            x: r.maxX,
-            y: r.minY + i
+          for (let j = r.minY; j < r.maxY; j++) {
+            obj = {
+              x: r.minX,
+              y: j
+            }
+            addInVariable(obj, doors)
+            obj = {
+              x: r.maxX,
+              y: j
+            }
+            // console.log("obj2", obj)
+            addInVariable(obj, doors)
           }
-          addInVariable(obj, doors)
-          obj = {
-            x: r.minX + i,
-            y: r.maxY
-          }
-          addInVariable(obj, doors)
         }
       })
 
@@ -169,9 +199,9 @@ export const Arena = () => {
 
   const furniture: Furniture[] = [
     {
-      room: { minX: 2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
+      room: {rotate: 0, minX: 2, maxX: 22, minY: 1, maxY: 20, name: "Room-A" },
       id: 'table-a1', type: 'rect-table', x: 4, y: 6, width: 16, height: 6,
-      label: 'Meeting',
+      label: 'Meeting Room-A',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
@@ -185,9 +215,9 @@ export const Arena = () => {
       ]
     },
     {
-      room: { minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
+      room: { rotate: 0, minX: 24, maxX: 44, minY: 1, maxY: 20, name: "Room-B" },
       id: 'table-a2', type: 'rect-table', x: 25, y: 6, width: 16, height: 6,
-      label: 'Meeting',
+      label: 'Meeting Room-B',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
@@ -201,9 +231,9 @@ export const Arena = () => {
       ]
     },
     {
-      room: { minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
+      room: { rotate: 0, minX: 46, maxX: 66, minY: 1, maxY: 20, name: "Room-C" },
       id: 'table-a3', type: 'rect-table', x: 47, y: 6, width: 16, height: 6,
-      label: 'Meeting',
+      label: 'Meeting Room-C',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
@@ -217,20 +247,34 @@ export const Arena = () => {
       ]
     },
     {
-      room: { minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
-      id: 'table-a4', type: 'rect-table', x: 4, y: 35, width: 12, height: 6,
-      label: 'Meeting',
+      room: { rotate: 180, minX: 2, maxX: 22, minY: 30, maxY: 42, name: "Room-D" },
+      id: 'table-a4', type: 'rect-table', x: 6, y: 33, width: 11, height: 5,
+      label: 'Meeting Room-D',
       chairs: [
         { dx: 1, dy: -1, rotate: 0, chairId: 1 },
         { dx: 5, dy: -1, rotate: 0, chairId: 2 },
         { dx: 9, dy: -1, rotate: 0, chairId: 3 },
 
-        { dx: 1, dy: 6, rotate: 180, chairId: 5 },
-        { dx: 5, dy: 6, rotate: 180, chairId: 6 },
-        { dx: 9, dy: 6, rotate: 180, chairId: 7 },
+        { dx: 1, dy: 5 , rotate: 180, chairId: 5 },
+        { dx: 5, dy: 5, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 5, rotate: 180, chairId: 7 },
+      ]
+    },
+    {
+      room: { rotate: 180, minX: 22, maxX: 42, minY: 30, maxY: 42, name: "Room-E" },
+      id: 'table-a5', type: 'rect-table', x: 26, y: 33, width: 11, height: 5,
+      label: 'Meeting Room-E',
+      chairs: [
+        { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+        { dx: 5, dy: -1, rotate: 0, chairId: 2 },
+        { dx: 9, dy: -1, rotate: 0, chairId: 3 },
 
+        { dx: 1, dy: 5, rotate: 180, chairId: 5 },
+        { dx: 5, dy: 5, rotate: 180, chairId: 6 },
+        { dx: 9, dy: 5, rotate: 180, chairId: 7 },
       ]
     }
+
   ];
 
   const cleanupConnection = () => {
@@ -723,7 +767,11 @@ export const Arena = () => {
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 13;
       ctx.stroke();
-      ctx.clearRect((startX + width / 2 - 20) - 10, startY + height - 7, 60, 20);
+      if (room.name == "Room-D" || room.name == "Room-E") {
+        ctx.clearRect((startX + width / 2 - 20) - 10, startY - 7, 60, 20);
+      } else {
+        ctx.clearRect((startX + width / 2 - 20) - 10, startY + height - 7, 60, 20);
+      }
 
     });
 
@@ -791,7 +839,7 @@ export const Arena = () => {
     }
 
     if (ontheChair) return;
-     
+
     if (e.metaKey && e.key.toLowerCase() === "i") {
       if (InsideRoom) {
         const [x, y] = findNearbyChair(currentUser.x, currentUser.y, currentRoom);
