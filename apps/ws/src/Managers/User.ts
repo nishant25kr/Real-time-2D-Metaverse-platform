@@ -16,7 +16,7 @@ function getRandomId(length: number) {
 
 export class User {
     public id: string;
-    private spaceId?: string;
+    public spaceId?: string;
     public x: number;
     public y: number;
     public userId?: string
@@ -106,7 +106,7 @@ export class User {
                         if(parsedData.payload.isSitting){
                             console.log("Adding user to meeting room")
                             MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
-                            
+                            // RoomManager.getInstance().addUserToMeetingRoom(parsedData.payload.roomId, this)
                         } else {
                             MeetingRoomManager.getInstance().handleUserLeftMeeting(parsedData.payload.roomId, this)
                         }

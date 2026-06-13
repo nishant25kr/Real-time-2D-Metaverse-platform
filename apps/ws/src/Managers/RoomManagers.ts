@@ -1,11 +1,11 @@
 import type { OutgoingMessage } from "../types.js";
-import type { MeetingRoomManager } from "./MeetingRoomManager.js";
+import { MeetingRoomManager } from "./MeetingRoomManager.js";
 import type { User } from "./User.js";
 
 export class RoomManager {
     rooms: Map<string, User[]> = new Map()
-
     static instance: RoomManager
+    
     constructor() {
         this.rooms = new Map()
     }
@@ -42,5 +42,11 @@ export class RoomManager {
             return;
         }
         this.rooms.set(spaceId, this.rooms.get(spaceId)?.filter(u => u.userId !== userId)!)
+    }
+
+    public addUserToMeetingRoom(roomId: string, user: User){
+        const room = this.rooms.get(user.spaceId!)
+        if(!room) return;
+        if(!room.find(u => u.id === user.id)) return;
     }
 }

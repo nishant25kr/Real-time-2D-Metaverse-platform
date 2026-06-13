@@ -9,10 +9,6 @@ export class MeetingRoom{
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];
-        // setInterval(() => {
-        //     console.log(roomId)
-        //     console.log(this.users.length)
-        // }, 2000);
     }
     
     public addUser(user: User){

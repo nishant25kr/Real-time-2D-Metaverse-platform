@@ -6,7 +6,7 @@
       "@repo/db": ["../../packages/db/dist"],
       "@repo/ui": ["../../packages/ui/src"]
     },
-
+    
     "rootDir": "./src",
     "outDir": "./dist",
 

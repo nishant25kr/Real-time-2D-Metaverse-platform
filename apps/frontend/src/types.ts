@@ -20,7 +20,7 @@ export interface Furniture {
     height: number;
     label?: string;
     chairs: { dx: number; dy: number; chairId: number; rotate: number }[];
-    room:{minX:number, maxX: number, minY: number, maxY: number, name: string }
+    room:{rotate: number, minX:number, maxX: number, minY: number, maxY: number, name: string }
 }
 
 export interface DynamicComponentProps {
