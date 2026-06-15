@@ -1,3 +1,4 @@
+import type WebSocket from "ws";
 import type { OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
 import { string } from "zod";
@@ -10,22 +11,33 @@ export class MeetingRoom{
         this.roomId = roomId;
         this.users = [];
     }
-    
+
+    private canSend(ws: WebSocket) {
+        return ws.readyState === 1;
+    }
+
+    private safeSend(ws: WebSocket, message: unknown) {
+        if (!this.canSend(ws)) return;
+        try {
+            ws.send(JSON.stringify(message));
+        } catch (error) {
+            console.error('Failed to send meeting room WebSocket message', error);
+        }
+    }
+
     public addUser(user: User){
         if(this.users.find( u => u.id === user.id)) return;
         this.users.push(user)
         const length = this.users.length
         if(length < 2) return;
         console.log("broadcasting init call")
-        user.ws.send(
-            JSON.stringify({
-                type: "init-call",
-                payload: {
-                    meetingId: this.roomId,
-                    id: Array.from(new Set(this.users.map(u => u.userId))) || [],
-                }
-            })
-        )
+        this.safeSend(user.ws, {
+            type: "init-call",
+            payload: {
+                meetingId: this.roomId,
+                id: Array.from(new Set(this.users.map(u => u.userId))) || [],
+            }
+        })
         
     }
 
@@ -33,12 +45,12 @@ export class MeetingRoom{
         this.users = this.users.filter(u => u.id !== user.id);
 
         this.users.forEach((u) => {
-            u.ws.send(JSON.stringify({
+            this.safeSend(u.ws, {
                 type: "user-left-meeting",
                 payload: {
                     userId: user.userId
                 }
-            }));
+            });
         });
     }
 
@@ -46,9 +58,7 @@ export class MeetingRoom{
         if(!this.users.find(u => u.id === user.id)) return;
         this.users.forEach((u)=>{
             if(u.id !== user.id){
-                u.ws.send(
-                    JSON.stringify(message)
-                )
+                this.safeSend(u.ws, message);
             }
         })
     }
@@ -60,16 +70,14 @@ export class MeetingRoom{
     public onOffer(targetId: string, sdp: any, user: User){
         this.users.forEach(u => {
             if (u.userId === targetId) {
-                u.ws.send(
-                    JSON.stringify({
-                        type: "offer",
-                        payload: {
-                            meetingId: this.roomId,
-                            sdp,
-                            senderId: user.userId
-                        }
-                    })
-                )
+                this.safeSend(u.ws, {
+                    type: "offer",
+                    payload: {
+                        meetingId: this.roomId,
+                        sdp,
+                        senderId: user.userId
+                    }
+                });
             }
         })
     }
@@ -77,13 +85,13 @@ export class MeetingRoom{
     public onAnswer(targetId: string, sdp: any, user: User){
         const targetUser = this.users.find(u => u.userId === targetId);
         if (targetUser) {
-            targetUser.ws.send(JSON.stringify({
+            this.safeSend(targetUser.ws, {
                 type: "answer",
                 payload: {
                     sdp,
                     senderId: user.userId
                 }
-            }));
+            });
         }
 
     }
@@ -91,14 +99,14 @@ export class MeetingRoom{
     public onIceCandidate(targetId: string, candidate: any, type: string, user: User){
         const targetUser = this.users.find(u => u.userId === targetId);
         if (targetUser) {
-            targetUser.ws.send(JSON.stringify({
+            this.safeSend(targetUser.ws, {
                 type: "add-ice-candidate",
                 payload: {
                     candidate,
                     type,
                     senderId: user.userId
                 }
-            }));
+            });
         }
     }
 

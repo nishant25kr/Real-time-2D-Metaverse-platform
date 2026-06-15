@@ -30,9 +30,9 @@ export class RoomManager {
             return;
         }
         this.rooms.get(roomId)?.forEach((x) => {
-            if (x.id != user.id) {
-                if (x.ws.readyState === x.ws.OPEN) {
-                    x.ws.send(JSON.stringify(message))
+            if (x.id !== user.id) {
+                if (x.ws.readyState === 1) {
+                    x.ws.send(JSON.stringify(message));
                 }
             }
         })

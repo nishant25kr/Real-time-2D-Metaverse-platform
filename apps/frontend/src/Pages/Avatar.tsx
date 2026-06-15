@@ -37,9 +37,9 @@ export const Avatar = () => {
         try {
             setSubmitting(true);
             setError("");
-            const res = await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/api/v1/admin/avatar`,
-                { imageUrl, name },
+            const res = await axios.put(
+                `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/add-avatar`,
+                { avatarId: selectedId || imageUrl },
                 { headers: { authorization: `Bearer ${signup_token}` } }
             );
             if (res.status === 200) {
