@@ -27,6 +27,19 @@ export class User {
         this.initHandler();
     }
 
+    private canSend() {
+        return this.ws.readyState === 1;
+    }
+
+    private safeSend(message: unknown) {
+        if (!this.canSend()) return;
+        try {
+            this.ws.send(JSON.stringify(message));
+        } catch (error) {
+            console.error('Failed to send WebSocket message', error);
+        }
+    }
+
     initHandler() {
         this.ws.on("message", async (data) => {
             const parsedData = JSON.parse(data.toString());
@@ -55,7 +68,7 @@ export class User {
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
                     const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
-                    this.ws.send(JSON.stringify({
+                    this.safeSend({
                         type: "space-joined",
                         payload: {
                             spawn: {
@@ -65,7 +78,7 @@ export class User {
                             users: usersInroom,
                             yourId: this.userId
                         }
-                    }))
+                    })
                     RoomManager.getInstance().broadcast(
                         {
                             type: "user-joined",
@@ -112,13 +125,13 @@ export class User {
                         }
                     }
                     else {
-                        this.ws.send(JSON.stringify({
+                        this.safeSend({
                             type: "movement-rejected",
                             payload: {
                                 x: this.x,
                                 y: this.y
                             }
-                        }));
+                        });
                     }
                     break;
                     
@@ -153,18 +166,19 @@ export class User {
     }
 
     destroy() {
-        RoomManager.getInstance().broadcast(
-            {
-                type: "user-left",
-                payload: {
-                    id: this.userId,
-                }
-            },
-            this,
-            this.spaceId!
-        )
-        // RoomManager.getInstance().removeUser(this.spaceId!, this.userId!)
-        // MeetingRoomManager.getInstance().handleUs    erLeftMeeting(, this)
+        if (this.spaceId && this.userId) {
+            RoomManager.getInstance().broadcast(
+                {
+                    type: "user-left",
+                    payload: {
+                        id: this.userId,
+                    }
+                },
+                this,
+                this.spaceId
+            );
+            RoomManager.getInstance().removeUser(this.spaceId, this.userId);
+        }
     }
 
 }

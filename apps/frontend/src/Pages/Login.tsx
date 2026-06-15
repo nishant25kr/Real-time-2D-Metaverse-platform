@@ -23,7 +23,6 @@ export const Login = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/signin`,
                 { username, password }
             );
-
             const token = res.data.token;
             const userId = res.data.userId;
 
@@ -34,7 +33,6 @@ export const Login = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/metadata/bulk?ids=["${userId}"]`,
                 { headers: { authorization: `Bearer ${token}` } }
             );
-
             const avatarId = avatarRes.data?.avatars?.[0]?.avatarId;
 
             if (!avatarId) {

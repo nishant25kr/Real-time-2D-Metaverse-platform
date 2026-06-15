@@ -79,6 +79,8 @@ userRouter.get("/metadata/bulk",userMiddleware, async (req, res) => {
             avatar: true
         }
     })
+    console.log("metadata", metadata)       
+            
 
     return res.status(200).json({
         avatars: metadata.map((m: any) => ({
@@ -87,4 +89,47 @@ userRouter.get("/metadata/bulk",userMiddleware, async (req, res) => {
         }))
     })
 
+})
+
+userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
+    const { avatarId } = req.body
+
+    if (!avatarId) {
+        return res.status(400).json({
+            message: "avatarId is required"
+        })
+    }
+
+    if (!req.userId) {
+        return res.status(400).json({ message: "Unauthorized" })
+    }
+
+    try {
+        const avatar = await client.avatar.findUnique({
+            where:{
+                id: avatarId
+            }
+        })
+
+        if(!avatar){
+            return res.status(400).json({
+                message: "avatar not available"
+            })
+        }
+
+        await client.user.update({
+            where: {
+                id: req.userId
+            },
+            data: {
+                avatarId: avatarId
+            }
+        })
+
+        return res.status(200).json({ message: "Avatar Updated" })
+    } catch (error) {
+        return res.status(400).json({
+            message: "Invalid avatar id"
+        });
+    }
 })

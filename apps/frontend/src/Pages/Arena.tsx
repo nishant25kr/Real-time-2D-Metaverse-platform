@@ -113,7 +113,7 @@ export const Arena = () => {
         ]
         if (r.rotate === 0) {
           for (let i = 0; i < 20; i++) {
-            obj = {
+            obj = { 
               x: r.minX,
               y: r.minY + i
             }
@@ -373,8 +373,11 @@ export const Arena = () => {
   function CheckisinsideRoom(x: number, y: number) {
     furniture.forEach((e) => {
       if (x >= e.room.minX && x <= e.room.maxX && y >= e.room.minY && y <= e.room.maxY) {
+        console.log("inside room", e.room.name)
         setInsideRoom(true)
         setCurrentRoom(e.room.name)
+      }else{
+        // setInsideRoom(false)
       }
     })
   }
@@ -683,6 +686,7 @@ export const Arena = () => {
     const ctx = canvas.getContext('2d')
 
     const resizeCanvas = () => {
+      console.log("resizing canvas", InsideRoom)
       canvas.width = InsideRoom ? `${window.innerWidth - 300}` : `${window.innerWidth - 100}`;
       canvas.height = window.innerHeight;
     }
