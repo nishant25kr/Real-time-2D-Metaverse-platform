@@ -7,23 +7,19 @@ import { useRoomPresence }  from '../hooks/Useroompresence';
 import { useCoordinates }   from '../hooks/Usecoordinates';
 import type { User } from '../types';
 
-
-
 export const Arena = () => {
   const wsRef = useRef<WebSocket | null>(null);
-
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users,       setUsers]       = useState(new Map<string, User>());
   const [message,     setMessage]     = useState('Go near a chair');
   const [onTheChair,  setOnTheChair]  = useState(false);
+  const [loading,     setLoading]     = useState(true);
 
-  // Stable refs for values needed inside event-handler / async callbacks
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef  = useRef(false);
   const lastPosition   = useRef<{ x: number; y: number } | null>(null);
   const onMessageRef   = useRef<((msg: any) => void) | null>(null);
 
-  // ─── hooks ──────────────────────────────────────────────────────────────
   const { localStream, streamRef, getAccess, stopAll } = useMedia();
 
   const { insideRoom, currentRoom, insideRoomRef, currentRoomRef, checkRoomPresence } =
@@ -36,17 +32,10 @@ export const Arena = () => {
 
   const canvasRef = useArenaCanvas({ currentUser, users, insideRoom, message });
 
-  // ─── helpers ────────────────────────────────────────────────────────────
-
-  /** Returns true when (x,y) is not a wall cell. */
   const isValidMove = useCallback((x: number, y: number): boolean => {
     return !invalidCoordinates.has(`${x},${y}`);
   }, [invalidCoordinates]);
 
-  /**
-   * Finds the chair cell nearest to (x,y) within the given room.
-   * Returns undefined if none found.
-   */
   const findNearbyChairCell = useCallback(
     (x: number, y: number, roomName: string): { x: number; y: number } | undefined => {
       const coords = validCoordinates.get(roomName);
@@ -83,11 +72,6 @@ export const Arena = () => {
     }));
   }, []);
 
-  /**
-   * Called on every position change.
-   * FIX: uses refs so it always sees fresh insideRoom/currentRoom values
-   * (the state versions would be stale inside the keydown handler).
-   */
   const handleMove = useCallback((x: number, y: number, isSitting: boolean) => {
     const { insideRoom: nowInside } = checkRoomPresence(x, y);
 
@@ -100,8 +84,6 @@ export const Arena = () => {
 
     sendMove(x, y, isSitting);
   }, [checkRoomPresence, streamRef, getAccess, stopAll, cleanupAllPeers, sendMove]);
-
-  // ─── WebSocket message handler ──────────────────────────────────────────
 
   const handleWebSocketMessage = useCallback(async (msg: any) => {
     switch (msg.type) {
@@ -120,6 +102,7 @@ export const Arena = () => {
           msg.payload.users.forEach((u: any) => map.set(u.id, u));
           setUsers(map);
         }
+        setLoading(false);
         break;
       }
 
@@ -199,6 +182,7 @@ export const Arena = () => {
     }
 
     if (onTheChairRef.current) return; 
+    if (onTheChair) return; 
 
     // Cmd+I  →  sit in nearby chair
     if (e.metaKey && e.key.toLowerCase() === 'i') {
@@ -259,9 +243,23 @@ export const Arena = () => {
       cleanupAllPeers();
       stopAll();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
-  // ─── render ──────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="px-10 py-5 border-b border-gray-100">
+          <span className="text-sm font-semibold tracking-widest uppercase text-gray-800">MetaVerse</span>
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+            <p className="text-sm text-gray-400">Connecting to space...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -316,7 +314,6 @@ export const Arena = () => {
                 </div>
               )}
 
-              {/* Remote videos */}
               {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
                 <div key={userId} className="flex flex-col gap-1.5">
                   <p className="text-xs text-gray-400 truncate">{userId.slice(0, 8)}…</p>

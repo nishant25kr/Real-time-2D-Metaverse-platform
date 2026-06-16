@@ -50,8 +50,12 @@ export function useCoordinates() {
     const set = new Set<string>();
 
     FURNITURE.forEach((item) => {
+      const px = item.x * CELL_SIZE;
+      const py = item.y * CELL_SIZE;
+      // const pw = item.width * CELL_SIZE;
+      // const ph = item.height * CELL_SIZE;
+
       const r = item.room;
-      // Door gap: middle three cells on the bottom wall
       const doorMid = Math.floor((r.minX + r.maxX) / 2);
       const doorCells = new Set([
         r.rotate === 0 ? `${doorMid - 1},${r.maxY}` : `${doorMid - 1},${r.minY}`,
@@ -65,21 +69,30 @@ export function useCoordinates() {
       };
       if (r.rotate == 0) {
         for (let i = 0; i < 20; i++) {
-          addIfNotDoor(r.minX, r.minY + i); 
-          addIfNotDoor(r.minX + i, r.minY);     
-          addIfNotDoor(r.maxX, r.minY + i); 
-          addIfNotDoor(r.minX + i, r.maxY);     
+          addIfNotDoor(r.minX, r.minY + i);
+          addIfNotDoor(r.minX + i, r.minY);
+          addIfNotDoor(r.maxX, r.minY + i);
+          addIfNotDoor(r.minX + i, r.maxY);
         }
       } else {
-        for(let i = 0; i < 20; i++){
+        for (let i = 0; i < 20; i++) {
           addIfNotDoor(r.minX + i, r.minY)
           addIfNotDoor(r.minX + i, r.maxY)
         }
-        for(let i = r.minY; i < r.maxY; i++){
+        for (let i = r.minY; i < r.maxY; i++) {
           addIfNotDoor(r.minX, i)
           addIfNotDoor(r.maxX, i)
         }
       }
+
+      const c = item.chairs
+      c.forEach((c) => {
+        const cx = px + c.dx * CELL_SIZE + CELL_SIZE / 2;
+        const cy = py + c.dy * CELL_SIZE + CELL_SIZE / 2;
+        console.log(Math.floor(cx/CELL_SIZE),Math.floor(cy/CELL_SIZE))
+        const key = `${Math.floor(cx/CELL_SIZE)+1},${Math.floor(cy/CELL_SIZE)+1}`;
+        set.add(key);
+      })
 
     });
 
