@@ -1,24 +1,24 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { CELL_SIZE, FURNITURE } from '../Constants';
-import { useMedia }         from '../hooks/Usemedia';
-import { useWebRTC }        from '../hooks/Usewebrtc';
-import { useArenaCanvas }   from '../hooks/Usearenacanvas';
-import { useRoomPresence }  from '../hooks/Useroompresence';
-import { useCoordinates }   from '../hooks/Usecoordinates';
+import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES } from '../Constants';
+import { useMedia } from '../hooks/Usemedia';
+import { useWebRTC } from '../hooks/Usewebrtc';
+import { useArenaCanvas } from '../hooks/Usearenacanvas';
+import { useRoomPresence } from '../hooks/Useroompresence';
+import { useCoordinates } from '../hooks/Usecoordinates';
 import type { User } from '../types';
 
 export const Arena = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users,       setUsers]       = useState(new Map<string, User>());
-  const [message,     setMessage]     = useState('Go near a chair');
-  const [onTheChair,  setOnTheChair]  = useState(false);
-  const [loading,     setLoading]     = useState(true);
+  const [users, setUsers] = useState(new Map<string, User>());
+  const [message, setMessage] = useState('Go near a chair');
+  const [onTheChair, setOnTheChair] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const currentUserRef = useRef<User | null>(null);
-  const onTheChairRef  = useRef(false);
-  const lastPosition   = useRef<{ x: number; y: number } | null>(null);
-  const onMessageRef   = useRef<((msg: any) => void) | null>(null);
+  const onTheChairRef = useRef(false);
+  const lastPosition = useRef<{ x: number; y: number } | null>(null);
+  const onMessageRef = useRef<((msg: any) => void) | null>(null);
 
   const { localStream, streamRef, getAccess, stopAll } = useMedia();
 
@@ -28,7 +28,7 @@ export const Arena = () => {
   const { validCoordinates, invalidCoordinates } = useCoordinates();
 
   const { remoteStreams, sendOffer, receiveOffer, receiveAnswer, addIceCandidate,
-          cleanupPeer, cleanupAllPeers } = useWebRTC({ wsRef, streamRef, getAccess });
+    cleanupPeer, cleanupAllPeers } = useWebRTC({ wsRef, streamRef, getAccess });
 
   const canvasRef = useArenaCanvas({ currentUser, users, insideRoom, message });
 
@@ -38,6 +38,8 @@ export const Arena = () => {
 
   const findNearbyChairCell = useCallback(
     (x: number, y: number, roomName: string): { x: number; y: number } | undefined => {
+      console.log("Finding nearby chair cell for room:", roomName, "at position:", x, y);
+
       const coords = validCoordinates.get(roomName);
       if (!coords) { setMessage('Go near a chair'); return undefined; }
 
@@ -46,7 +48,21 @@ export const Arena = () => {
 
       setMessage('Cmd+I to sit');
 
-      // Resolve the actual chair cell from furniture
+      if (roomName === "Table1" || roomName === "Table2" || roomName === "Table3" || roomName === "Table4" || roomName === "Table5") {
+        console.log("Checking individual tables for chair match:", match);
+        for (const item of INDIVIDUAL_TABLES) {
+          if (item.name !== roomName) continue;
+          const px = item.x * CELL_SIZE;
+          const py = item.y * CELL_SIZE;
+          const chair = item.chairs.find((c) => c.chairId === match.id);
+          if (!chair) continue;
+          const cx = Math.floor((px + chair.dx * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
+          const cy = Math.floor((py + chair.dy * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
+          return { x: cx, y: cy };
+        }
+
+      }
+
       for (const item of FURNITURE) {
         if (item.room.name !== roomName) continue;
         const px = item.x * CELL_SIZE;
@@ -58,13 +74,12 @@ export const Arena = () => {
         return { x: cx, y: cy };
       }
 
-      setMessage('Go near a chair');
+      setMessage('Press Cmd+I to sit');
       return undefined;
     },
     [validCoordinates]
   );
 
-  /** Sends a move event to the server. */
   const sendMove = useCallback((x: number, y: number, isSitting: boolean) => {
     wsRef.current?.send(JSON.stringify({
       type: 'move',
@@ -181,30 +196,42 @@ export const Arena = () => {
       return;
     }
 
-    if (onTheChairRef.current) return; 
-    if (onTheChair) return; 
-
-    // Cmd+I  →  sit in nearby chair
+    if (onTheChairRef.current) return;
+    if (onTheChair) return;
     if (e.metaKey && e.key.toLowerCase() === 'i') {
-      if (!insideRoomRef.current) return;
-      const seat = findNearbyChairCell(user.x, user.y, currentRoomRef.current);
-      if (!seat) return;
-      lastPosition.current = { x: user.x, y: user.y };
-      onTheChairRef.current = true;
-      setOnTheChair(true);
-      const seated: User = { ...user, ...seat };
-      currentUserRef.current = seated;
-      setCurrentUser(seated);
-      handleMove(seat.x, seat.y, true);
-      return;
+      if (!insideRoomRef.current) {
+        console.log("Not inside a room, checking for individual tables");
+        const seat1 = findNearbyChairCell(user.x, user.y, "Table1");
+        lastPosition.current = { x: user.x, y: user.y };
+        if (seat1) {
+          onTheChairRef.current = true;
+          setOnTheChair(true);
+          const seated: User = { ...user, ...seat1 };
+          currentUserRef.current = seated;
+          setCurrentUser(seated);
+          handleMove(seat1.x, seat1.y, true);
+        }
+
+        return;
+      } else {
+        const seat = findNearbyChairCell(user.x, user.y, currentRoomRef.current);
+        if (!seat) return;
+        lastPosition.current = { x: user.x, y: user.y };
+        onTheChairRef.current = true;
+        setOnTheChair(true);
+        const seated: User = { ...user, ...seat };
+        currentUserRef.current = seated;
+        setCurrentUser(seated);
+        handleMove(seat.x, seat.y, true);
+        return;
+      }
     }
 
-    // Arrow keys
     let dx = 0, dy = 0;
-    if (e.key === 'ArrowUp')    dy = -1;
-    if (e.key === 'ArrowDown')  dy =  1;
-    if (e.key === 'ArrowLeft')  dx = -1;
-    if (e.key === 'ArrowRight') dx =  1;
+    if (e.key === 'ArrowUp') dy = -1;
+    if (e.key === 'ArrowDown') dy = 1;
+    if (e.key === 'ArrowLeft') dx = -1;
+    if (e.key === 'ArrowRight') dx = 1;
     if (!dx && !dy) return;
 
     const newX = user.x + dx;
@@ -218,11 +245,9 @@ export const Arena = () => {
     handleMove(newX, newY, false);
   }, [findNearbyChairCell, handleMove, isValidMove, insideRoomRef, currentRoomRef]);
 
-  // ─── WebSocket lifecycle ─────────────────────────────────────────────────
-
   useEffect(() => {
-    const params  = new URLSearchParams(window.location.search);
-    const token   = params.get('token')   ?? '';
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token') ?? '';
     const spaceId = params.get('spaceId') ?? '';
     const passcode = params.get('passcode') ?? '';
 
@@ -243,7 +268,7 @@ export const Arena = () => {
       cleanupAllPeers();
       stopAll();
     };
-  }, []); 
+  }, []);
 
   if (loading) {
     return (

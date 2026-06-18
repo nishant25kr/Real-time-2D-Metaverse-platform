@@ -88,9 +88,9 @@ export const FURNITURE: Furniture[] = [
   },
 ];
 
-export const INDIVIDUALTABLES: any[] = [
+export const INDIVIDUAL_TABLES: any[] = [  
   {
-    x: 47, y: 33, width: 3, height: 3,
+    name:"Table1",x: 47, y: 33, width: 3, height: 3, type: 'rect-table',
     label: 'T1',
     chairs: [
       { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -98,7 +98,7 @@ export const INDIVIDUALTABLES: any[] = [
     ],
   },
   {
-    x: 53, y: 33, width: 3, height: 3,
+    name:"Table2",x: 53, y: 33, width: 3, height: 3, type: 'rect-table',
     label: 'T1',
     chairs: [
       { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -106,7 +106,7 @@ export const INDIVIDUALTABLES: any[] = [
     ],
   },
   {
-    x: 59, y: 33, width: 3, height: 3,
+    name:"Table3",x: 59, y: 33, width: 3, height: 3, type: 'rect-table',
     label: 'T1',
     chairs: [
       { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -114,7 +114,7 @@ export const INDIVIDUALTABLES: any[] = [
     ],
   },
   {
-    x: 65, y: 33, width: 3, height: 3,
+    name:"Table4",x: 65, y: 33, width: 3, height: 3, type: 'rect-table',
     label: 'T1',
     chairs: [
       { dx: 1, dy: -1, rotate: 0, chairId: 1 },
@@ -122,11 +122,19 @@ export const INDIVIDUALTABLES: any[] = [
     ],
   },
   {
-    x: 71, y: 33, width: 3, height: 3,
+    name:"Table5",x: 71, y: 33, width: 3, height: 3, type: 'rect-table',
     label: 'T1',
     chairs: [
       { dx: 1, dy: -1, rotate: 0, chairId: 1 },
       { dx: 1, dy: 3, rotate: 180, chairId: 5 },
     ],
   },
-]
+  // {
+  //   x: 75 , y: 7 , width: 3, height: 3, type: 'round-table',
+  //   label: 'T1',
+  //   chairs: [
+  //     { dx: 1, dy: -1, rotate: 0, chairId: 1 },
+  //     { dx: 1, dy: 3, rotate: 180, chairId: 5 },
+  //   ],
+  // }
+];

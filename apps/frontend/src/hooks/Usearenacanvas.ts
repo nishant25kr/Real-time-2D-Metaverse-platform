@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { CELL_SIZE, FURNITURE, INDIVIDUALTABLES } from '../Constants';
+import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES } from '../Constants';
 import type { Furniture } from '../types';
 
 interface CanvasProps {
@@ -55,7 +55,7 @@ export function useArenaCanvas({ currentUser, users, insideRoom, message }: Canv
       ;
     })
 
-    INDIVIDUALTABLES.forEach((item) => {
+    INDIVIDUAL_TABLES.forEach((item) => {
       drawTable(ctx,item)
     })
 

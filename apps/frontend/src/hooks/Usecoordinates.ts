@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CELL_SIZE, FURNITURE } from '../Constants';
+import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES } from '../Constants';
 
 export function useCoordinates() {
   const validCoordinates = useMemo<Map<string, { x: number; y: number; id: number }[]>>(() => {
@@ -38,13 +38,51 @@ export function useCoordinates() {
         });
       });
 
-      // Merge into existing room entry so multiple tables in one room work
       const existing = map.get(item.room.name) ?? [];
       map.set(item.room.name, [...existing, ...roomCoords]);
     });
 
+    INDIVIDUAL_TABLES.forEach((item) => {
+      const px = item.x * CELL_SIZE;
+      const py = item.y * CELL_SIZE;
+      const roomCoords: { x: number; y: number; id: number }[] = [];
+
+      item.chairs.forEach((chair: any) => {
+        const cx = px + chair.dx * CELL_SIZE + CELL_SIZE / 2;
+        const cy = py + chair.dy * CELL_SIZE + CELL_SIZE / 2;
+        const cellX = Math.floor(cx / CELL_SIZE) + 1;
+        const cellY = Math.floor(cy / CELL_SIZE) + 1;
+        const isFacingUp = chair.rotate === 0;
+
+        const adjacentCells = isFacingUp
+          ? [
+            { x: cellX - 1, y: cellY - 1 },
+            { x: cellX + 1, y: cellY - 1 },
+            { x: cellX - 1, y: cellY },
+            { x: cellX, y: cellY - 1 },
+            { x: cellX + 1, y: cellY },
+          ]
+          : [
+            { x: cellX - 1, y: cellY + 1 },
+            { x: cellX - 1, y: cellY },
+            { x: cellX + 1, y: cellY + 1 },
+            { x: cellX, y: cellY + 1 },
+            { x: cellX + 1, y: cellY },
+          ];
+
+        adjacentCells.forEach((cell) => {
+          roomCoords.push({ x: cell.x, y: cell.y, id: chair.chairId });
+        });
+      });
+
+      const existing = map.get(item.name) ?? [];
+      map.set(item.name, [...existing, ...roomCoords]);
+    });
+
     return map;
   }, []);
+
+
 
   const invalidCoordinates = useMemo<Set<string>>(() => {
     const set = new Set<string>();
@@ -94,6 +132,21 @@ export function useCoordinates() {
         set.add(key);
       })
 
+    });
+
+    INDIVIDUAL_TABLES.forEach((item) => {
+      const px = item.x * CELL_SIZE;
+      const py = item.y * CELL_SIZE;
+
+      const c = item.chairs
+      c.forEach((c: any) => {
+        const cx = px + c.dx * CELL_SIZE + CELL_SIZE / 2;
+        const cy = py + c.dy * CELL_SIZE + CELL_SIZE / 2;
+        console.log(Math.floor(cx/CELL_SIZE)+1,Math.floor(cy/CELL_SIZE)+1)
+        const key = `${Math.floor(cx/CELL_SIZE)+1},${Math.floor(cy/CELL_SIZE)+1}`;
+        console.log('Adding invalid chair coordinate:', key);
+        set.add(key);
+      })
     });
 
     return set;
