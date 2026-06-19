@@ -13,6 +13,7 @@ export const Arena = () => {
   const [users, setUsers] = useState(new Map<string, User>());
   const [message, setMessage] = useState('Go near a chair');
   const [onTheChair, setOnTheChair] = useState(false);
+  const [onTheTable, setOnTheTable] = useState(false)
   const [loading, setLoading] = useState(true);
 
   const currentUserRef = useRef<User | null>(null);
@@ -37,9 +38,7 @@ export const Arena = () => {
   }, [invalidCoordinates]);
 
   const findNearbyChairCell = useCallback(
-    (x: number, y: number, roomName: string): { x: number; y: number } | undefined => {
-      console.log("Finding nearby chair cell for room:", roomName, "at position:", x, y);
-
+    (x: number, y: number, roomName: string): { x: number; y: number; name?: string } | undefined => {
       const coords = validCoordinates.get(roomName);
       if (!coords) { setMessage('Go near a chair'); return undefined; }
 
@@ -48,26 +47,25 @@ export const Arena = () => {
 
       setMessage('Cmd+I to sit');
 
-      if (roomName === "Table1" || roomName === "Table2" || roomName === "Table3" || roomName === "Table4" || roomName === "Table5") {
+      if (roomName === "Table") {
         console.log("Checking individual tables for chair match:", match);
         for (const item of INDIVIDUAL_TABLES) {
-          if (item.name !== roomName) continue;
+          if (item.name !== match.name) continue;
           const px = item.x * CELL_SIZE;
           const py = item.y * CELL_SIZE;
-          const chair = item.chairs.find((c) => c.chairId === match.id);
+          const chair = item.chairs.find((c: { chairId: number }) => c.chairId === match.id);
           if (!chair) continue;
           const cx = Math.floor((px + chair.dx * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
           const cy = Math.floor((py + chair.dy * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
-          return { x: cx, y: cy };
+          return { x: cx, y: cy, name:match.name };
         }
-
       }
 
       for (const item of FURNITURE) {
         if (item.room.name !== roomName) continue;
         const px = item.x * CELL_SIZE;
         const py = item.y * CELL_SIZE;
-        const chair = item.chairs.find((c) => c.chairId === match.id);
+        const chair = item.chairs.find((c: { chairId: number }) => c.chairId === match.id);
         if (!chair) continue;
         const cx = Math.floor((px + chair.dx * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
         const cy = Math.floor((py + chair.dy * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
@@ -80,24 +78,47 @@ export const Arena = () => {
     [validCoordinates]
   );
 
-  const sendMove = useCallback((x: number, y: number, isSitting: boolean) => {
+  const sendMove = useCallback((x: number, y: number, isSitting: boolean, tablename?: string) => {
+    console.log("current room", currentRoomRef.current)
+    console.log("user", currentUserRef.current?.userId)
     wsRef.current?.send(JSON.stringify({
       type: 'move',
-      payload: { x, y, userId: currentUserRef.current?.userId, isSitting, roomId: currentRoomRef.current },
+      payload: {
+        x,
+        y,
+        userId: currentUserRef.current?.userId,
+        isSitting,
+        roomId: currentRoomRef.current || tablename
+      },
     }));
   }, []);
 
-  const handleMove = useCallback((x: number, y: number, isSitting: boolean) => {
-    const { insideRoom: nowInside } = checkRoomPresence(x, y);
+  const handleMove = useCallback((x: number, y: number, isSitting: boolean, onTable?: boolean, tablename?: string) => {
+    if (onTable) {
+      if (!streamRef.current) {
+        getAccess();
+      } else if (streamRef.current) {
+        stopAll();
+        cleanupAllPeers();
+      }
+      console.log("inside handle move", x, y, isSitting, onTable);
 
-    if (nowInside && !streamRef.current) {
-      getAccess();
-    } else if (!nowInside && streamRef.current) {
-      stopAll();
-      cleanupAllPeers();
+      sendMove(x, y, isSitting, tablename);
+      return;
+    } else {
+      const { insideRoom: nowInside } = checkRoomPresence(x, y);
+
+      if (nowInside && !streamRef.current) {
+        getAccess();
+      } else if (!nowInside && streamRef.current) {
+        stopAll();
+        cleanupAllPeers();
+      }
+      console.log("inside handle move", x, y, isSitting);
+
+      sendMove(x, y, isSitting);
     }
 
-    sendMove(x, y, isSitting);
   }, [checkRoomPresence, streamRef, getAccess, stopAll, cleanupAllPeers, sendMove]);
 
   const handleWebSocketMessage = useCallback(async (msg: any) => {
@@ -175,10 +196,7 @@ export const Arena = () => {
     }
   }, [cleanupPeer, receiveOffer, receiveAnswer, addIceCandidate, sendOffer]);
 
-  // Always point onMessageRef at the latest handler without re-registering the WS listener
   onMessageRef.current = handleWebSocketMessage;
-
-  // ─── keyboard handler ───────────────────────────────────────────────────
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const user = currentUserRef.current;
@@ -189,6 +207,7 @@ export const Arena = () => {
       const pos = lastPosition.current ?? { x: user.x, y: user.y };
       onTheChairRef.current = false;
       setOnTheChair(false);
+      setOnTheTable(false);
       const updated: User = { ...user, ...pos };
       currentUserRef.current = updated;
       setCurrentUser(updated);
@@ -200,18 +219,18 @@ export const Arena = () => {
     if (onTheChair) return;
     if (e.metaKey && e.key.toLowerCase() === 'i') {
       if (!insideRoomRef.current) {
-        console.log("Not inside a room, checking for individual tables");
-        const seat1 = findNearbyChairCell(user.x, user.y, "Table1");
+        const tableseat = findNearbyChairCell(user.x, user.y, "Table");
+        const seats = {x: tableseat?.x, y:tableseat?.y}
         lastPosition.current = { x: user.x, y: user.y };
-        if (seat1) {
+        if (seats) {
           onTheChairRef.current = true;
           setOnTheChair(true);
-          const seated: User = { ...user, ...seat1 };
+          setOnTheTable(true)
+          const seated: User = { ...user, ...tableseat };
           currentUserRef.current = seated;
           setCurrentUser(seated);
-          handleMove(seat1.x, seat1.y, true);
+          handleMove(seats.x, seats.y, true, true, tableseat?.name);
         }
-
         return;
       } else {
         const seat = findNearbyChairCell(user.x, user.y, currentRoomRef.current);
@@ -315,15 +334,13 @@ export const Arena = () => {
           <canvas ref={canvasRef} className="bg-white block" />
         </div>
 
-        {/* Sidebar — only when inside a room */}
-        {insideRoom && (
+        {(insideRoom || onTheTable) && (
           <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
             <div className="px-4 py-3 border-b border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Participants</p>
             </div>
 
             <div className="flex flex-col gap-3 p-4 overflow-y-auto flex-1">
-              {/* Local video */}
               {localStream ? (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-xs text-gray-400">You</p>

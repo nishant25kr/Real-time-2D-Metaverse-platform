@@ -1,15 +1,6 @@
 import { useRef, useState, useCallback } from 'react';
 import { FURNITURE } from '../Constants';
 
-/**
- * Tracks which room (if any) the current user occupies.
- *
- * FIX: The original code only ever set InsideRoom = true, never false.
- * This hook correctly clears room membership when the player leaves.
- *
- * A ref mirrors each piece of state so async / event-handler callbacks
- * never close over stale values.
- */
 export function useRoomPresence() {
   const [insideRoom, setInsideRoom]   = useState(false);
   const [currentRoom, setCurrentRoom] = useState('');
