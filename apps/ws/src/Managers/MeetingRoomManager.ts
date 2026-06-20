@@ -5,13 +5,15 @@ import { RoomManager } from "./RoomManagers.js";
 export class MeetingRoomManager {
     // meetingRooms: Map<string, MeetingRoom> = new Map()
     meetingRooms: Map<string, Map<string, MeetingRoom> > = new Map()
+    occupiedChair: {x:number, y: number}[];
     static instance: MeetingRoomManager
 
     constructor() {   
         this.meetingRooms = new Map();
+        this.occupiedChair = []
         setInterval(() => {
             console.log("Current Meeting Rooms and their user counts:")
-            console.log(this.meetingRooms)
+            console.log(this.occupiedChair  )
         }, 2000);
     }
 
@@ -80,6 +82,21 @@ export class MeetingRoomManager {
         if (!room) return;
         room.removeUser(user);
         
+    }
+
+    public addOccupiedChair(x: number, y: number){
+        this.occupiedChair.push({x,y})
+    }
+
+    public removeOccupiedChair(x: number, y: number){
+        this.occupiedChair.filter( item => !(item.x === x || item.y === x))
+    }
+
+    public checkOccupiedChair(x: number, y:number) {
+        this.occupiedChair.forEach(i => {
+            if(i.x == y && i.y == y) return true;
+        })
+        return false;
     }
 
 }

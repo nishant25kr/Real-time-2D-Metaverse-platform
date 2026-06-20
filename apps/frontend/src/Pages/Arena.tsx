@@ -15,6 +15,7 @@ export const Arena = () => {
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
   const [loading, setLoading] = useState(true);
+  const [seatOccupied, setSeatOccupied] = useState<{x: number, y: number}[]>([])
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
@@ -48,7 +49,6 @@ export const Arena = () => {
       setMessage('Cmd+I to sit');
 
       if (roomName === "Table") {
-        console.log("Checking individual tables for chair match:", match);
         for (const item of INDIVIDUAL_TABLES) {
           if (item.name !== match.name) continue;
           const px = item.x * CELL_SIZE;
@@ -79,8 +79,6 @@ export const Arena = () => {
   );
 
   const sendMove = useCallback((x: number, y: number, isSitting: boolean, tablename?: string) => {
-    console.log("current room", currentRoomRef.current)
-    console.log("user", currentUserRef.current?.userId)
     wsRef.current?.send(JSON.stringify({
       type: 'move',
       payload: {
@@ -101,7 +99,6 @@ export const Arena = () => {
         stopAll();
         cleanupAllPeers();
       }
-      console.log("inside handle move", x, y, isSitting, onTable);
 
       sendMove(x, y, isSitting, tablename);
       return;
@@ -114,7 +111,6 @@ export const Arena = () => {
         stopAll();
         cleanupAllPeers();
       }
-      console.log("inside handle move", x, y, isSitting);
 
       sendMove(x, y, isSitting);
     }
@@ -212,6 +208,7 @@ export const Arena = () => {
       currentUserRef.current = updated;
       setCurrentUser(updated);
       handleMove(pos.x, pos.y, false);
+      
       return;
     }
 
@@ -220,6 +217,7 @@ export const Arena = () => {
     if (e.metaKey && e.key.toLowerCase() === 'i') {
       if (!insideRoomRef.current) {
         const tableseat = findNearbyChairCell(user.x, user.y, "Table");
+        if(!tableseat || !tableseat.x || !tableseat.y) return;
         const seats = {x: tableseat?.x, y:tableseat?.y}
         lastPosition.current = { x: user.x, y: user.y };
         if (seats) {
@@ -230,6 +228,8 @@ export const Arena = () => {
           currentUserRef.current = seated;
           setCurrentUser(seated);
           handleMove(seats.x, seats.y, true, true, tableseat?.name);
+          setSeatOccupied(prev => [...prev,{x: seats.x, y:seats.y}]);
+          console.log("seat",seatOccupied)
         }
         return;
       } else {
@@ -242,6 +242,8 @@ export const Arena = () => {
         currentUserRef.current = seated;
         setCurrentUser(seated);
         handleMove(seat.x, seat.y, true);
+        setSeatOccupied(prev => [...prev,{x: seat.x, y:seat.y}])
+        console.log("seat",seatOccupied)
         return;
       }
     }

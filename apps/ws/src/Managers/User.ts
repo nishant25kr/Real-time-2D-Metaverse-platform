@@ -101,6 +101,9 @@ export class User {
                     const Ydisplacement = Math.abs(this.y - moveY);
 
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
+                        const res = MeetingRoomManager.getInstance().checkOccupiedChair(moveX, moveY)
+                        console.log("res",res)
+                        if(res) return;
                         this.x = moveX;
                         this.y = moveY;
                         RoomManager.getInstance().broadcast(
@@ -119,6 +122,7 @@ export class User {
                         if(parsedData.payload.isSitting){
                             console.log("Adding user to meeting room")
                             MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
+                            MeetingRoomManager.getInstance().addOccupiedChair(moveX, moveY)
                             // RoomManager.getInstance().addUserToMeetingRoom(parsedData.payload.roomId, this)
                         } else {
                             MeetingRoomManager.getInstance().handleUserLeftMeeting(parsedData.payload.roomId, this)

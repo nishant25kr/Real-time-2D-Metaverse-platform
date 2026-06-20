@@ -6,7 +6,6 @@ import { string } from "zod";
 export class MeetingRoom{
     public roomId: string;
     private users : User[];
-
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];

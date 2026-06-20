@@ -2,11 +2,8 @@ import { useRef, useState, useCallback } from 'react';
 import { RTC_CONFIGURATION } from '../Constants';
 
 interface UseWebRTCProps {
-  /** Stable ref to the WebSocket so we never capture a stale socket. */
   wsRef: React.MutableRefObject<WebSocket | null>;
-  /** Stable ref to the local MediaStream. */
   streamRef: React.MutableRefObject<MediaStream | null>;
-  /** Called when we need a stream but streamRef is empty (lazy init). */
   getAccess: () => Promise<MediaStream | null>;
 }
 
@@ -15,7 +12,6 @@ export function useWebRTC({ wsRef, streamRef, getAccess }: UseWebRTCProps) {
   const pendingCandidates = useRef(new Map<string, RTCIceCandidateInit[]>());
   const [remoteStreams, setRemoteStreams] = useState(new Map<string, MediaStream>());
 
-  // ─── helpers ──────────────────────────────────────────────────────────────
 
   const addRemoteTrack = useCallback((userId: string, track: MediaStreamTrack) => {
     setRemoteStreams((prev) => {
@@ -71,11 +67,9 @@ export function useWebRTC({ wsRef, streamRef, getAccess }: UseWebRTCProps) {
     []
   );
 
-  // ─── public API ───────────────────────────────────────────────────────────
 
   const sendOffer = useCallback(
     async (targetId: string, meetingId: string) => {
-      // Don't create duplicate connections
       const existing = peerRef.current.get(targetId);
       if (existing && existing.signalingState !== 'closed') return;
 

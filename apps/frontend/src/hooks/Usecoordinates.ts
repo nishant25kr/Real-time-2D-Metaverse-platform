@@ -78,11 +78,8 @@ export function useCoordinates() {
     });
     const existing = map.get("Table") ?? [];
     map.set("Table", [...existing, ...roomCoords]);
-    console.log("map", map)
     return map;
   }, []);
-
-
 
   const invalidCoordinates = useMemo<Set<string>>(() => {
     const set = new Set<string>();
@@ -90,9 +87,6 @@ export function useCoordinates() {
     FURNITURE.forEach((item) => {
       const px = item.x * CELL_SIZE;
       const py = item.y * CELL_SIZE;
-      // const pw = item.width * CELL_SIZE;
-      // const ph = item.height * CELL_SIZE;
-
       const r = item.room;
       const doorMid = Math.floor((r.minX + r.maxX) / 2);
       const doorCells = new Set([
@@ -127,7 +121,6 @@ export function useCoordinates() {
       c.forEach((c) => {
         const cx = px + c.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + c.dy * CELL_SIZE + CELL_SIZE / 2;
-        console.log(Math.floor(cx / CELL_SIZE), Math.floor(cy / CELL_SIZE))
         const key = `${Math.floor(cx / CELL_SIZE) + 1},${Math.floor(cy / CELL_SIZE) + 1}`;
         set.add(key);
       })
@@ -142,9 +135,7 @@ export function useCoordinates() {
       c.forEach((c: any) => {
         const cx = px + c.dx * CELL_SIZE + CELL_SIZE / 2;
         const cy = py + c.dy * CELL_SIZE + CELL_SIZE / 2;
-        console.log(Math.floor(cx / CELL_SIZE) + 1, Math.floor(cy / CELL_SIZE) + 1)
         const key = `${Math.floor(cx / CELL_SIZE) + 1},${Math.floor(cy / CELL_SIZE) + 1}`;
-        console.log('Adding invalid chair coordinate:', key);
         set.add(key);
       })
     });
