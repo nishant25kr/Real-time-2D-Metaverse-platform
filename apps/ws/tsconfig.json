@@ -2,10 +2,6 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": {
-      "@repo/db": ["../../packages/db/dist"],
-      "@repo/ui": ["../../packages/ui/src"]
-    },
     
     "rootDir": "./src",
     "outDir": "./dist",
