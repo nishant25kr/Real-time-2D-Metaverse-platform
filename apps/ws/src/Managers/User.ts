@@ -55,7 +55,7 @@ export class User {
                         return;
                     }
                     const space = await client.space.findUnique({
-                        where:{
+                        where: {
                             id: spaceID,
                             passcode: passcode
                         }
@@ -67,7 +67,7 @@ export class User {
                     }
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y:u.y })) ?? []
+                    const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y: u.y })) ?? []
                     this.safeSend({
                         type: "space-joined",
                         payload: {
@@ -102,8 +102,17 @@ export class User {
 
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
                         const res = MeetingRoomManager.getInstance().checkOccupiedChair(moveX, moveY)
-                        console.log("res",res)
-                        if(res) return;
+                        console.log("res", res)
+                        if (res) {
+                            this.safeSend({
+                                type: "movement-rejected",
+                                payload: {
+                                    x: this.x,
+                                    y: this.y
+                                }
+                            });
+                            return;
+                        }
                         this.x = moveX;
                         this.y = moveY;
                         RoomManager.getInstance().broadcast(
@@ -112,14 +121,14 @@ export class User {
                                 payload: {
                                     x: this.x,
                                     y: this.y,
-                                    id: this.userId 
+                                    id: this.userId
                                 }
                             },
                             this,
                             this.spaceId!
                         );
-                        
-                        if(parsedData.payload.isSitting){
+
+                        if (parsedData.payload.isSitting) {
                             console.log("Adding user to meeting room")
                             MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
                             MeetingRoomManager.getInstance().addOccupiedChair(moveX, moveY)
@@ -138,7 +147,7 @@ export class User {
                         });
                     }
                     break;
-                    
+
                 case "add-ice-candidate":
                     // console.log("PARSED DATA", parsedData)
                     MeetingRoomManager.getInstance().onIceCandidate(
@@ -156,12 +165,12 @@ export class User {
                         parsedData.payload.meetingId,
                         parsedData.payload.sdp,
                         this);
-                    break;  
+                    break;
 
                 case "answer":
-                    MeetingRoomManager.getInstance().onAnswer(parsedData.payload.targetId,parsedData.payload.meetingId, parsedData.payload.sdp, this)
-                break;
-                
+                    MeetingRoomManager.getInstance().onAnswer(parsedData.payload.targetId, parsedData.payload.meetingId, parsedData.payload.sdp, this)
+                    break;
+
                 case "user-left":
                     this.destroy();
                     break;

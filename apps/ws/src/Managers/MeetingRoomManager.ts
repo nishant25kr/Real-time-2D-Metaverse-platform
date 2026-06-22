@@ -92,11 +92,17 @@ export class MeetingRoomManager {
         this.occupiedChair.filter( item => !(item.x === x || item.y === x))
     }
 
-    public checkOccupiedChair(x: number, y:number) {
+    public checkOccupiedChair(x: number, y: number) {
+        console.log("checking ",x,y)
+        let res = false;
         this.occupiedChair.forEach(i => {
-            if(i.x == y && i.y == y) return true;
+            console.log("i",i)
+            if(i.x == x && i.y == y){
+                console.log("found")
+                res = true;
+            } 
         })
-        return false;
+        return res;
     }
 
 }

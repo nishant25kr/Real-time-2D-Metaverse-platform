@@ -15,7 +15,6 @@ export const Arena = () => {
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
   const [loading, setLoading] = useState(true);
-  const [seatOccupied, setSeatOccupied] = useState<{x: number, y: number}[]>([])
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
@@ -57,7 +56,7 @@ export const Arena = () => {
           if (!chair) continue;
           const cx = Math.floor((px + chair.dx * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
           const cy = Math.floor((py + chair.dy * CELL_SIZE + CELL_SIZE / 2) / CELL_SIZE) + 1;
-          return { x: cx, y: cy, name:match.name };
+          return { x: cx, y: cy, name: match.name };
         }
       }
 
@@ -156,9 +155,22 @@ export const Arena = () => {
         break;
 
       case 'movement-rejected': {
-        const corrected: User = { ...currentUserRef.current!, x: msg.payload.x, y: msg.payload.y };
+        const corrected: User = {
+          ...currentUserRef.current!,
+          x: msg.payload.x,
+          y: msg.payload.y
+        };
         currentUserRef.current = corrected;
         setCurrentUser(corrected);
+        console.log("on the chair", onTheChair)
+        console.log("on the table", onTheTable)
+        setOnTheChair(false);
+        setOnTheTable(false);
+        onTheChairRef.current = false;
+        if (streamRef.current) {
+          stopAll();
+          cleanupAllPeers();
+        } 
         break;
       }
 
@@ -208,7 +220,6 @@ export const Arena = () => {
       currentUserRef.current = updated;
       setCurrentUser(updated);
       handleMove(pos.x, pos.y, false);
-      
       return;
     }
 
@@ -217,8 +228,8 @@ export const Arena = () => {
     if (e.metaKey && e.key.toLowerCase() === 'i') {
       if (!insideRoomRef.current) {
         const tableseat = findNearbyChairCell(user.x, user.y, "Table");
-        if(!tableseat || !tableseat.x || !tableseat.y) return;
-        const seats = {x: tableseat?.x, y:tableseat?.y}
+        if (!tableseat || !tableseat.x || !tableseat.y) return;
+        const seats = { x: tableseat?.x, y: tableseat?.y }
         lastPosition.current = { x: user.x, y: user.y };
         if (seats) {
           onTheChairRef.current = true;
@@ -228,8 +239,6 @@ export const Arena = () => {
           currentUserRef.current = seated;
           setCurrentUser(seated);
           handleMove(seats.x, seats.y, true, true, tableseat?.name);
-          setSeatOccupied(prev => [...prev,{x: seats.x, y:seats.y}]);
-          console.log("seat",seatOccupied)
         }
         return;
       } else {
@@ -242,8 +251,6 @@ export const Arena = () => {
         currentUserRef.current = seated;
         setCurrentUser(seated);
         handleMove(seat.x, seat.y, true);
-        setSeatOccupied(prev => [...prev,{x: seat.x, y:seat.y}])
-        console.log("seat",seatOccupied)
         return;
       }
     }
