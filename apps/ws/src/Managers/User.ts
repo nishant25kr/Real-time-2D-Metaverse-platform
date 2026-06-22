@@ -48,7 +48,13 @@ export class User {
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
                     const passcode = parsedData.payload.passcode
-                    const user = jwt.verify(token, JWT_PASSWORD)
+                    let user;
+                    try {
+                        user = jwt.verify(token, JWT_PASSWORD);
+                    } catch (err) {
+                        this.ws.close();
+                        return;
+                    }
                     const id = this.userId = (user as jwt.JwtPayload).userId;
                     if (!id) {
                         this.ws.close();
@@ -169,6 +175,22 @@ export class User {
 
                 case "answer":
                     MeetingRoomManager.getInstance().onAnswer(parsedData.payload.targetId, parsedData.payload.meetingId, parsedData.payload.sdp, this)
+                    break;
+
+                case "leave":
+                    // Clean up meeting rooms the user may be in
+                    if (this.spaceId) {
+                        const spaceRooms = MeetingRoomManager.getInstance().meetingRooms.get(this.spaceId);
+                        if (spaceRooms) {
+                            spaceRooms.forEach((room) => {
+                                room.removeUser(this);
+                            });
+                        }
+                        // Remove occupied chair at user's current position
+                        MeetingRoomManager.getInstance().removeOccupiedChair(this.x, this.y);
+                    }
+                    this.destroy();
+                    this.ws.close();
                     break;
 
                 case "user-left":

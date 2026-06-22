@@ -1,1 +1,1 @@
-export const JWT_PASSWORD = ";lasdkf;adlk039485023r"
+export const JWT_PASSWORD = process.env.JWT_PASSWORD;

@@ -3,7 +3,9 @@ import 'dotenv/config'
 import express from "express"
 import client from "@repo/db"
 import { router } from "./routes/v1/index.js"
-
+setInterval(() => {
+    console.log("server is running")
+}, 2000);
 const app = express()
 app.use(cors())
 app.use(express.json())

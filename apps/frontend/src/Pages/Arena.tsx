@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES } from '../Constants';
 import { useMedia } from '../hooks/Usemedia';
 import { useWebRTC } from '../hooks/Usewebrtc';
@@ -8,6 +9,7 @@ import { useCoordinates } from '../hooks/Usecoordinates';
 import type { User } from '../types';
 
 export const Arena = () => {
+  const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState(new Map<string, User>());
@@ -32,6 +34,19 @@ export const Arena = () => {
     cleanupPeer, cleanupAllPeers } = useWebRTC({ wsRef, streamRef, getAccess });
 
   const canvasRef = useArenaCanvas({ currentUser, users, insideRoom, message });
+
+  const handleLeave = useCallback(() => {
+    // Send leave message to backend before closing
+    wsRef.current?.send(JSON.stringify({ type: 'leave' }));
+    // Clean up media and WebRTC
+    stopAll();
+    cleanupAllPeers();
+    // Close the WebSocket connection
+    wsRef.current?.close();
+    wsRef.current = null;
+    // Navigate back to dashboard
+    navigate('/dashboard');
+  }, [stopAll, cleanupAllPeers, navigate]);
 
   const isValidMove = useCallback((x: number, y: number): boolean => {
     return !invalidCoordinates.has(`${x},${y}`);
@@ -162,8 +177,6 @@ export const Arena = () => {
         };
         currentUserRef.current = corrected;
         setCurrentUser(corrected);
-        console.log("on the chair", onTheChair)
-        console.log("on the table", onTheTable)
         setOnTheChair(false);
         setOnTheTable(false);
         onTheChairRef.current = false;
@@ -279,7 +292,8 @@ export const Arena = () => {
     const spaceId = params.get('spaceId') ?? '';
     const passcode = params.get('passcode') ?? '';
 
-    const ws = new WebSocket('ws://localhost:8080/');
+    // const ws = new WebSocket('ws://localhost:8080/');
+    const ws = new WebSocket(import.meta.env.VITE_WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -332,6 +346,18 @@ export const Arena = () => {
             </span>
           )}
           <span className="text-xs text-gray-400">{message}</span>
+          <button
+            id="leave-space-btn"
+            onClick={handleLeave}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full hover:bg-red-100 hover:border-red-300 transition-all duration-200 cursor-pointer"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Leave Space
+          </button>
         </div>
       </div>
 

@@ -89,7 +89,7 @@ export class MeetingRoomManager {
     }
 
     public removeOccupiedChair(x: number, y: number){
-        this.occupiedChair.filter( item => !(item.x === x || item.y === x))
+        this.occupiedChair = this.occupiedChair.filter( item => !(item.x === x && item.y === y))
     }
 
     public checkOccupiedChair(x: number, y: number) {
