@@ -15,7 +15,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "generate": "npx prisma generate",
+    "generate": "DATABASE_URL=postgresql://dummy:dummy@dummy/dummy npx prisma generate",
     "build": "npm run generate && tsc --build && cp -r generated dist/"
   },
   "keywords": [],
