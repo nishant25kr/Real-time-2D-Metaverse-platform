@@ -16,7 +16,7 @@ export const Arena = () => {
   const [message, setMessage] = useState('Go near a chair');
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
@@ -135,6 +135,7 @@ export const Arena = () => {
     switch (msg.type) {
 
       case 'space-joined': {
+        console.log('message joined')
         const user: User = {
           x: msg.payload.spawn.x,
           y: msg.payload.spawn.y,
@@ -148,7 +149,7 @@ export const Arena = () => {
           msg.payload.users.forEach((u: any) => map.set(u.id, u));
           setUsers(map);
         }
-        setLoading(false);
+        // setLoading(false);
         break;
       }
 
@@ -292,12 +293,19 @@ export const Arena = () => {
     const spaceId = params.get('spaceId') ?? '';
     const passcode = params.get('passcode') ?? '';
 
-    // const ws = new WebSocket('ws://localhost:8080/');
-    const ws = new WebSocket(import.meta.env.VITE_WS_URL);
+    const ws = new WebSocket('ws://localhost:8080/');
+    // const ws = new WebSocket(import.meta.env.VITE_WS_URL);
     wsRef.current = ws;
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'join', payload: { spaceId, token, passcode } }));
+      ws.send(JSON.stringify({ 
+        type: 'join',
+         payload: {
+          spaceId,
+          token, 
+          passcode 
+        } 
+      }));
     };
 
     ws.onmessage = (event) => {

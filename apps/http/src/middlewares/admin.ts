@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken"
-import { JWT_PASSWORD } from "../config.js"
 import type { NextFunction, Request, Response } from "express"
+
+const JWT_PASSWORD =  process.env.JWT_PASSWORD || "password"
 
 export const adminMiddleware = (
     req: Request,

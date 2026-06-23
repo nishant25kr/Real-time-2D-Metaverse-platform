@@ -13,7 +13,7 @@ export class MeetingRoomManager {
         this.occupiedChair = []
         setInterval(() => {
             console.log("Current Meeting Rooms and their user counts:")
-            console.log(this.occupiedChair  )
+            console.log(this.meetingRooms  )
         }, 2000);
     }
 

@@ -1,9 +1,9 @@
 import type WebSocket from "ws";
 import { RoomManager } from "./RoomManagers.js";
 import jwt from 'jsonwebtoken';
-import { JWT_PASSWORD } from "../config.js";
 import client from "@repo/db"
 import { MeetingRoomManager } from "./MeetingRoomManager.js";
+const JWT_PASSWORD =  process.env.JWT_PASSWORD || "password"
 
 function getRandomId(length: number) {
     const character = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890qoeruqojdnksncadlfjk;l"
@@ -45,6 +45,7 @@ export class User {
             const parsedData = JSON.parse(data.toString());
             switch (parsedData.type) {
                 case "join":
+                    console.log("inside join")
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
                     const passcode = parsedData.payload.passcode
@@ -52,6 +53,7 @@ export class User {
                     try {
                         user = jwt.verify(token, JWT_PASSWORD);
                     } catch (err) {
+                        console.log(err)
                         this.ws.close();
                         return;
                     }

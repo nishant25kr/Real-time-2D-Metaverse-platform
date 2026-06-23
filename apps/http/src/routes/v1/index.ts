@@ -6,7 +6,7 @@ import { CreateAvatarSchema, SignInSchema, SignUpSchema } from "../../types/inde
 import client from "@repo/db"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
-import { JWT_PASSWORD } from "../../config.js";
+const JWT_PASSWORD =  process.env.JWT_PASSWORD || "password"
 
 export const router = Router()
 
