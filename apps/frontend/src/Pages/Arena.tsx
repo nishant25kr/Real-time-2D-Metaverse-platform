@@ -149,7 +149,7 @@ export const Arena = () => {
           msg.payload.users.forEach((u: any) => map.set(u.id, u));
           setUsers(map);
         }
-        // setLoading(false);
+        setLoading(false);
         break;
       }
 

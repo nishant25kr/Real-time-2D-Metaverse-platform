@@ -6,7 +6,6 @@ export const Avatar = () => {
     const [searchParams] = useSearchParams();
     const signup_token = searchParams.get("signup_token");
     const [imageUrl, setImageUrl] = useState<string>("");
-    const [name, setName] = useState<string>("default");
     const [loadingAvatars, setLoadingAvatars] = useState<boolean>(true);
     const [avatars, setAvatars] = useState<any[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -121,7 +120,6 @@ export const Avatar = () => {
                             type="text"
                             placeholder="Avatar name (optional)"
                             className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
-                            onChange={(e) => setName(e.target.value)}
                         />
                     </div>
                 </div>
