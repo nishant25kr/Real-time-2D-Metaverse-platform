@@ -13,10 +13,11 @@ export const Arena = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState(new Map<string, User>());
+  const [avatar, setAvatar] = useState<any>(null);
   const [message, setMessage] = useState('Go near a chair');
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
@@ -33,7 +34,9 @@ export const Arena = () => {
   const { remoteStreams, sendOffer, receiveOffer, receiveAnswer, addIceCandidate,
     cleanupPeer, cleanupAllPeers } = useWebRTC({ wsRef, streamRef, getAccess });
 
-  const canvasRef = useArenaCanvas({ currentUser, users, insideRoom, message });
+    
+    let canvasRef
+    canvasRef = useArenaCanvas({ currentUser, users, insideRoom, message, avatar });
 
   const handleLeave = useCallback(() => {
     // Send leave message to backend before closing
@@ -130,7 +133,7 @@ export const Arena = () => {
     }
 
   }, [checkRoomPresence, streamRef, getAccess, stopAll, cleanupAllPeers, sendMove]);
-
+  
   const handleWebSocketMessage = useCallback(async (msg: any) => {
     switch (msg.type) {
 
@@ -141,7 +144,10 @@ export const Arena = () => {
           y: msg.payload.spawn.y,
           userId: msg.payload.yourId,
         };
+      
+        
         currentUserRef.current = user;
+        setAvatar(msg.payload.avatar)
         setCurrentUser(user);
 
         if (msg.payload.users.length > 0) {
@@ -184,7 +190,7 @@ export const Arena = () => {
         if (streamRef.current) {
           stopAll();
           cleanupAllPeers();
-        } 
+        }
         break;
       }
 
@@ -298,13 +304,13 @@ export const Arena = () => {
     wsRef.current = ws;
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ 
+      ws.send(JSON.stringify({
         type: 'join',
-         payload: {
+        payload: {
           spaceId,
-          token, 
-          passcode 
-        } 
+          token,
+          passcode
+        }
       }));
     };
 

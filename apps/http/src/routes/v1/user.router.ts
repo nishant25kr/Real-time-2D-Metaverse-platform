@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { UpdateMetadataSchema } from "../../types/index.js";
+import { CreateAvatarSchema, UpdateMetadataSchema } from "../../types/index.js";
 import client from "@repo/db"
 import { userMiddleware } from "../../middlewares/user.js";
 
@@ -92,6 +92,7 @@ userRouter.get("/metadata/bulk",userMiddleware, async (req, res) => {
 })
 
 userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
+
     const { avatarId } = req.body
 
     if (!avatarId) {
@@ -111,7 +112,7 @@ userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
             }
         })
 
-        if(!avatar){
+    if(!avatar){
             return res.status(400).json({
                 message: "avatar not available"
             })
@@ -131,5 +132,81 @@ userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
         return res.status(400).json({
             message: "Invalid avatar id"
         });
+    }
+})
+
+userRouter.get("/get-avatar",userMiddleware, async(req,res)=>{
+
+    try {
+        const userId = (req.query.id ?? "[]") as any
+        console.log("userId ",userId)
+        if(!userId){
+            return res.status(400).json({
+                message: "ID is required"
+            })
+        }
+        const user = await client.user.findUnique({
+            where:{
+                id: userId
+            },
+            select:{
+                avatar:true
+            }
+        })
+        if(!user){
+            return res.status(400).json({
+                message: "user not found"
+            })
+        }
+        const avatar = await client.avatar.findUnique({
+            where:{
+                id: user.avatar?.id
+            }
+        })
+        if(!avatar){
+            return res.status(400).json({
+                message: "avatar not found"
+            })
+        }
+        console.log('avatar', avatar)
+
+        return res.status(200).json({
+            avatar
+        })
+    } catch (error) {
+        return res.status(404).json({
+            message: error
+        })        
+    }
+})
+
+userRouter.post("/avatar", userMiddleware, async (req, res) => {
+
+    const parsedData = CreateAvatarSchema.safeParse(req.body)
+
+    if (!parsedData.success) {
+        return res.status(400).json({
+            message: "Validation failed"
+        })
+    }
+
+    try {
+
+        const avatar = await client.avatar.create({
+            data: {
+                imageUrl: parsedData.data.imageUrl,
+                name: parsedData.data.name,
+                // user : 
+            }
+        })
+
+        return res.status(200).json({
+            avatarId: avatar.id
+        })
+
+    } catch (error) {
+        return res.status(400).json({
+            message: error
+        })
     }
 })

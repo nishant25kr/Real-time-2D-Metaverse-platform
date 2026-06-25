@@ -62,6 +62,24 @@ export class User {
                         this.ws.close();
                         return;
                     }
+                    const userdetails = await client.user.findUnique({
+                        where: {
+                            id: id
+                        }
+                    })
+                    if (!userdetails) {
+                        this.ws.close();
+                        return;
+                    }
+                    const avatar = await client.avatar.findUnique({
+                        where: {
+                            id: userdetails.avatarId!
+                        }
+                    })
+                    if (!avatar) {
+                        this.ws.close();
+                        return;
+                    }
                     const space = await client.space.findUnique({
                         where: {
                             id: spaceID,
@@ -84,7 +102,8 @@ export class User {
                                 y: this.y
                             },
                             users: usersInroom,
-                            yourId: this.userId
+                            yourId: this.userId,
+                            avatar: avatar
                         }
                     })
                     RoomManager.getInstance().broadcast(

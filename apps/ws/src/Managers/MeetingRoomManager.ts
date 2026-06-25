@@ -1,9 +1,7 @@
 import type { User } from "./User.js";
 import { MeetingRoom } from "./MeetingRoom.js";
-import { RoomManager } from "./RoomManagers.js";
 
 export class MeetingRoomManager {
-    // meetingRooms: Map<string, MeetingRoom> = new Map()
     meetingRooms: Map<string, Map<string, MeetingRoom> > = new Map()
     occupiedChair: {x:number, y: number}[];
     static instance: MeetingRoomManager
