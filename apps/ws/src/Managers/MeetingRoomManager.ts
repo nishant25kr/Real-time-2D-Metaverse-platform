@@ -5,13 +5,12 @@ export class MeetingRoomManager {
     meetingRooms: Map<string, Map<string, MeetingRoom> > = new Map()
     occupiedChair: {x:number, y: number}[];
     static instance: MeetingRoomManager
-
     constructor() {   
         this.meetingRooms = new Map();
         this.occupiedChair = []
         setInterval(() => {
             console.log("Current Meeting Rooms and their user counts:")
-            console.log(this.meetingRooms  )
+            console.log(this.occupiedChair  )
         }, 2000);
     }
 
@@ -91,7 +90,6 @@ export class MeetingRoomManager {
     }
 
     public checkOccupiedChair(x: number, y: number) {
-        console.log("checking ",x,y)
         let res = false;
         this.occupiedChair.forEach(i => {
             console.log("i",i)

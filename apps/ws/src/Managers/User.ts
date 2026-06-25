@@ -121,12 +121,12 @@ export class User {
                     break;
 
                 case "move":
-                    // console.log('parsedData',parsedData)
                     const moveX = parsedData.payload.x;
                     const moveY = parsedData.payload.y;
                     const Xdisplacement = Math.abs(this.x - moveX);
                     const Ydisplacement = Math.abs(this.y - moveY);
-
+                    const lastx = this.x;
+                    const lasty = this.y;
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
                         const res = MeetingRoomManager.getInstance().checkOccupiedChair(moveX, moveY)
                         console.log("res", res)
@@ -159,9 +159,9 @@ export class User {
                             console.log("Adding user to meeting room")
                             MeetingRoomManager.getInstance().addUser(parsedData.payload.roomId, this)
                             MeetingRoomManager.getInstance().addOccupiedChair(moveX, moveY)
-                            // RoomManager.getInstance().addUserToMeetingRoom(parsedData.payload.roomId, this)
                         } else {
                             MeetingRoomManager.getInstance().handleUserLeftMeeting(parsedData.payload.roomId, this)
+                            MeetingRoomManager.getInstance().removeOccupiedChair(lastx, lasty)
                         }
                     }
                     else {

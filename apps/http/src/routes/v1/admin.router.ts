@@ -159,6 +159,3 @@ adminRouter.post("/map", adminMiddleware, async (req, res) => {
         id: map.id
     })
 })
-
-
-
