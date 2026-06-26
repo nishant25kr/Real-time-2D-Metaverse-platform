@@ -3,6 +3,7 @@ import { RoomManager } from "./RoomManagers.js";
 import jwt from 'jsonwebtoken';
 import client from "@repo/db"
 import { MeetingRoomManager } from "./MeetingRoomManager.js";
+import type { UserAvatar } from "src/types.js";
 const JWT_PASSWORD =  process.env.JWT_PASSWORD || "password"
 
 function getRandomId(length: number) {
@@ -16,10 +17,12 @@ function getRandomId(length: number) {
 
 export class User {
     public id: string;
-    public spaceId?: string;
+    public spaceId!: string;
     public x: number;
     public y: number;
-    public userId?: string
+    public userId!: string;
+    public avatar!: UserAvatar;
+    public username!: string;
     constructor(public ws: WebSocket) {
         this.id = getRandomId(10);
         this.x = 25;
@@ -65,6 +68,11 @@ export class User {
                     const userdetails = await client.user.findUnique({
                         where: {
                             id: id
+                        },
+                        select:{
+                            password: false,
+                            username: true,
+                            avatarId: true
                         }
                     })
                     if (!userdetails) {
@@ -76,6 +84,8 @@ export class User {
                             id: userdetails.avatarId!
                         }
                     })
+                    this.avatar = avatar as UserAvatar;
+                    this.username = userdetails.username!;
                     if (!avatar) {
                         this.ws.close();
                         return;
@@ -93,7 +103,8 @@ export class User {
                     }
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y: u.y })) ?? []
+                    const usersInroom = RoomManager.getInstance().getAllUsersInRoom(spaceID);
+                    // rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y: u.y })) ?? []
                     this.safeSend({
                         type: "space-joined",
                         payload: {
@@ -103,7 +114,8 @@ export class User {
                             },
                             users: usersInroom,
                             yourId: this.userId,
-                            avatar: avatar
+                            avatar: avatar,
+                            username: userdetails.username
                         }
                     })
                     RoomManager.getInstance().broadcast(
@@ -112,7 +124,9 @@ export class User {
                             payload: {
                                 id: this.userId,
                                 x: this.x,
-                                y: this.y
+                                y: this.y,
+                                username: this.username, 
+                                avatar: this.avatar 
                             }
                         },
                         this,

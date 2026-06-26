@@ -13,7 +13,7 @@ export const Arena = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState(new Map<string, User>());
-  const [avatar, setAvatar] = useState<any>(null);
+  const [avatar, setAvatar] = useState<string>('');
   const [message, setMessage] = useState('Go near a chair');
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
@@ -143,13 +143,13 @@ export const Arena = () => {
           x: msg.payload.spawn.x,
           y: msg.payload.spawn.y,
           userId: msg.payload.yourId,
+          username: msg.payload.username,
+          avatar: msg.payload.avatar
         };
-      
-        
         currentUserRef.current = user;
-        setAvatar(msg.payload.avatar)
+        setAvatar(msg.payload.avatar.imageUrl)
         setCurrentUser(user);
-
+        console.log('users', msg.payload.users);
         if (msg.payload.users.length > 0) {
           const map = new Map<string, User>();
           msg.payload.users.forEach((u: any) => map.set(u.id, u));
@@ -162,7 +162,13 @@ export const Arena = () => {
       case 'user-joined':
         setUsers((prev) => {
           const next = new Map(prev);
-          next.set(msg.payload.id, { x: msg.payload.x, y: msg.payload.y, userId: msg.payload.id });
+          next.set(msg.payload.id, { 
+            x: msg.payload.x,
+            y: msg.payload.y, 
+            userId: msg.payload.id, 
+            username: msg.payload.username, 
+            avatar: msg.payload.avatar 
+          });
           return next;
         });
         break;

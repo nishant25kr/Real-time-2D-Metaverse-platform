@@ -1,5 +1,4 @@
-import type { OutgoingMessage } from "../types.js";
-import { MeetingRoomManager } from "./MeetingRoomManager.js";
+import type { OutgoingMessage, UserAvatar } from "../types.js";
 import type { User } from "./User.js";
 
 export class RoomManager {
@@ -48,5 +47,12 @@ export class RoomManager {
         const room = this.rooms.get(user.spaceId!)
         if(!room) return;
         if(!room.find(u => u.id === user.id)) return;
+    }
+
+    public getAllUsersInRoom(spaceId : string ):{id: string, x: number, y: number, avatar: UserAvatar, username: string}[]{
+        const usersInRoom = this.rooms.get(spaceId)
+        if(!usersInRoom) return [];
+
+        return usersInRoom.map(u => ({id: u.userId!, x: u.x, y: u.y, avatar: u.avatar, username: u.username}))
     }
 }

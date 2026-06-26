@@ -1,6 +1,7 @@
 import type { Furniture } from './types';
 
 export const CELL_SIZE = 20;
+export const LABEL_OFFSET_Y = 20;
 
 export const RTC_CONFIGURATION: RTCConfiguration = {
   iceServers: [

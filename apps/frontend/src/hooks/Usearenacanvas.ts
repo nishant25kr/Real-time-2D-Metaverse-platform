@@ -1,18 +1,16 @@
 import { useEffect, useRef } from 'react';
-import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES } from '../Constants';
+import { CELL_SIZE, FURNITURE, INDIVIDUAL_TABLES, LABEL_OFFSET_Y } from '../Constants';
 import type { Furniture } from '../types';
-const img1: any = new Image()
-img1.src = 'https://img.magnific.com/vetores-gratis/jovem-de-olhos-azuis_1308-174369.jpg'
 
 interface CanvasProps {
-  currentUser: { x: number; y: number; userId: string } | null;
+  currentUser: { x: number; y: number; userId: string; username: string } | null;
   users: Map<string, any>;
   insideRoom: boolean;
   message: string;    
   avatar: any;
 }
 
-export function useArenaCanvas({ currentUser, users, insideRoom, message }: CanvasProps) {
+export function useArenaCanvas({ currentUser, users, insideRoom, message, avatar }: CanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -63,39 +61,36 @@ export function useArenaCanvas({ currentUser, users, insideRoom, message }: Canv
     })
 
     if (currentUser?.x) {
-      drawAvatar(ctx, currentUser.x, currentUser.y, '#FF6B6B', `${currentUser.x}-${currentUser.y} ${message}`);
+      drawAvatar(ctx, currentUser.x, currentUser.y, '#FF6B6B', `${currentUser.x}-${currentUser.y} ${message}`, currentUser.username, avatar);
     }
 
     users.forEach((user) => {
       if (!user.x) return;
-      drawAvatar(ctx, user.x, user.y, '#ffe1e1', `${user.x}-${user.y}`);
+      console.log('user', user)
+      drawAvatar(ctx, user.x, user.y, '#ffe1e1', `${user.x}-${user.y}`, user.username, user.avatar.imageUrl? user.avatar.imageUrl : "");
     });
   }, [currentUser, users, insideRoom, message]);
 
   return canvasRef;
 }
 
-
-// function drawAvatar(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, label: string) {
-//   ctx.fillText(label, x * CELL_SIZE, y * CELL_SIZE + 20);
-//   console.log("inside draw avatar",x * CELL_SIZE - CELL_SIZE , y * CELL_SIZE - CELL_SIZE);
-//   ctx.drawImage(img1, x * CELL_SIZE - CELL_SIZE/2 , y * CELL_SIZE - CELL_SIZE/2, 30, 30);
-// }
-const LABEL_OFFSET_Y = 20;
-
 function drawAvatar(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   color: string,
-  label: string
+  label: string,
+  username: string,
+  imageUrl: string
 ) {
+  const img: any = new Image()
+  img.src = imageUrl
+
   const pixelX = x * CELL_SIZE;
   const pixelY = y * CELL_SIZE;
 
-  // Draw avatar image centered on the cell
   ctx.drawImage(
-    img1,
+    img,
     pixelX - CELL_SIZE / 2,
     pixelY - CELL_SIZE / 2,
     CELL_SIZE,
@@ -104,6 +99,7 @@ function drawAvatar(
 
   ctx.fillStyle = color;
   ctx.fillText(label, pixelX, pixelY + LABEL_OFFSET_Y);
+  ctx.fillText(username, pixelX, pixelY + LABEL_OFFSET_Y + 12);
 }
 function drawChair(ctx: CanvasRenderingContext2D, px: number, py: number) {
   ctx.fillStyle = '#94a3b8';

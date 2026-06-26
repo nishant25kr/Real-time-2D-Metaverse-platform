@@ -7,6 +7,12 @@ export interface User {
   x: number;
   y: number;
   userId: string;
+  username: string;
+  avatar: {
+    id: string;
+    imageUrl: string;
+    name: string;
+  }
 }
 
 export type FurnitureType = 'rect-table' | 'round-table' | 'solo-desk';
