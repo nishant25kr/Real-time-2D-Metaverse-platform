@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 import client from "@repo/db"
 import { MeetingRoomManager } from "./MeetingRoomManager.js";
 import type { UserAvatar } from "src/types.js";
-const JWT_PASSWORD =  process.env.JWT_PASSWORD || "password"
+const JWT_PASSWORD = process.env.JWT_PASSWORD || "password"
 
 function getRandomId(length: number) {
     const character = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890qoeruqojdnksncadlfjk;l"
@@ -69,7 +69,7 @@ export class User {
                         where: {
                             id: id
                         },
-                        select:{
+                        select: {
                             password: false,
                             username: true,
                             avatarId: true
@@ -103,8 +103,7 @@ export class User {
                     }
                     this.spaceId = spaceID;
                     RoomManager.getInstance().addUser(spaceID, this)
-                    const usersInroom = RoomManager.getInstance().getAllUsersInRoom(spaceID);
-                    // rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y: u.y })) ?? []
+                    const usersInroom = RoomManager.getInstance().rooms.get(spaceID)?.filter(u => u.id !== this.id).map((u) => ({ id: u.userId, x: u.x, y: u.y, avatar: u.avatar, username: u.username })) ?? []
                     this.safeSend({
                         type: "space-joined",
                         payload: {
@@ -125,8 +124,8 @@ export class User {
                                 id: this.userId,
                                 x: this.x,
                                 y: this.y,
-                                username: this.username, 
-                                avatar: this.avatar 
+                                username: this.username,
+                                avatar: this.avatar
                             }
                         },
                         this,

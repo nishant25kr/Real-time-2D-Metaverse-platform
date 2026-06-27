@@ -94,7 +94,7 @@ userRouter.get("/metadata/bulk",userMiddleware, async (req, res) => {
 userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
 
     const { avatarId } = req.body
-
+    console.log("avatarId", avatarId)
     if (!avatarId) {
         return res.status(400).json({
             message: "avatarId is required"
@@ -112,7 +112,7 @@ userRouter.put("/add-avatar", userMiddleware, async (req, res) => {
             }
         })
 
-    if(!avatar){
+        if(!avatar){
             return res.status(400).json({
                 message: "avatar not available"
             })

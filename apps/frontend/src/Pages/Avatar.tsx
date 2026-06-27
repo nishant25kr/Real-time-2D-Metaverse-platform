@@ -11,6 +11,8 @@ export const Avatar = () => {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [error, setError] = useState<string>("");
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const [creating, setCreating] = useState<boolean>(false)
+    const [name, setName] = useState<string>()
     const navigate = useNavigate();
 
     async function fetchAvatars() {
@@ -32,15 +34,15 @@ export const Avatar = () => {
     useEffect(() => { fetchAvatars(); }, []);
 
     async function submitAvatar() {
-        if (!imageUrl) { setError("Please select or enter an avatar URL."); return; }
         try {
             setSubmitting(true);
             setError("");
             const res = await axios.put(
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/add-avatar`,
-                { avatarId: selectedId || imageUrl },
+                { avatarId: selectedId },
                 { headers: { authorization: `Bearer ${signup_token}` } }
             );
+            console.log("res:",res)
             if (res.status === 200) {
                 navigate(`/dashboard/?token=${signup_token}`);
             }
@@ -48,6 +50,24 @@ export const Avatar = () => {
             setError("Failed to save avatar.");
         } finally {
             setSubmitting(false);
+        }
+    }
+
+    async function crateAvatar(){
+        try{
+            setCreating(true)
+            setError("");
+            const res = await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/api/v1/admin/avatar`,
+                { imageUrl: imageUrl, name: name },
+                { headers: { authorization: `Bearer ${signup_token}` } }
+            )
+            if(res.status === 200){
+                fetchAvatars()
+            }
+            setCreating(false)
+        }catch(error){
+            setError("Failed to load Avatar")
         }
     }
 
@@ -118,13 +138,21 @@ export const Avatar = () => {
                         />
                         <input
                             type="text"
-                            placeholder="Avatar name (optional)"
+                            placeholder="Name"
                             className="w-full border border-gray-200 rounded-md px-4 py-2.5 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-400 transition-colors"
+                            onChange = {(e) => {setName(e.target.value)}}
                         />
+                        <button
+                        onClick={crateAvatar}
+                        disabled={creating || !imageUrl || !name}
+                        className="bg-gray-900 text-white rounded-md px-6 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {creating ? "Creating..." : "CreateAvatar"}
+                    </button>
                     </div>
+                    
                 </div>
 
-                {/* Preview + Submit */}
                 <div className="flex items-center justify-between">
                     {imageUrl ? (
                         <div className="flex items-center gap-3">
@@ -136,7 +164,7 @@ export const Avatar = () => {
                     )}
                     <button
                         onClick={submitAvatar}
-                        disabled={submitting || !imageUrl}
+                        disabled={submitting || !selectedId}
                         className="bg-gray-900 text-white rounded-md px-6 py-2.5 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         {submitting ? "Saving..." : "Continue →"}
