@@ -4,7 +4,7 @@ import dotenv from "dotenv"
 import express from "express"
 import client from "@repo/db"
 import { router } from "./routes/v1/index.js"
-dotenv.config()
+dotenv.config({ path: ".env" })
 // setInterval(() => {
     console.log("server is running")
     // console.log("client",client)
