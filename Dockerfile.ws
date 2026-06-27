@@ -10,7 +10,7 @@ RUN npm ci
 FROM deps AS builder
 COPY packages/db packages/db
 COPY apps/ws apps/ws
-RUN npx turbo run build --filter=meta-verse-ws
+RUN npm run build --workspace=@repo/db && npm run build --workspace=meta-verse-ws
 
 FROM node:20-alpine AS runner
 WORKDIR /app

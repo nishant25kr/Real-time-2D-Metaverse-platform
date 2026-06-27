@@ -1,5 +1,5 @@
 # Render Blueprint: HTTP + WebSocket + PostgreSQL
-# Deploy: connect this repo in Render Dashboard → New → Blueprint → select render.yaml
+# Deploy: Render Dashboard → New → Blueprint → select this file
 
 databases:
   - name: meta-verse-db
@@ -10,10 +10,10 @@ databases:
 services:
   - type: web
     name: meta-verse-http
-    runtime: docker
-    dockerfilePath: ./Dockerfile.http
-    dockerContext: .
+    runtime: node
     plan: free
+    buildCommand: npm ci --include=dev && npm run build:http
+    startCommand: npm run start --workspace=http
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -29,10 +29,10 @@ services:
 
   - type: web
     name: meta-verse-ws
-    runtime: docker
-    dockerfilePath: ./Dockerfile.ws
-    dockerContext: .
+    runtime: node
     plan: free
+    buildCommand: npm ci --include=dev && npm run build:ws
+    startCommand: npm run start --workspace=meta-verse-ws
     envVars:
       - key: DATABASE_URL
         fromDatabase:

@@ -10,7 +10,7 @@ RUN npm ci
 FROM deps AS builder
 COPY packages/db packages/db
 COPY apps/http apps/http
-RUN npx turbo run build --filter=http
+RUN npm run build --workspace=@repo/db && npm run build --workspace=http
 
 FROM node:20-alpine AS runner
 WORKDIR /app

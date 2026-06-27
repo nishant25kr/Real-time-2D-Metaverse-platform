@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "build:http": "npm run build --workspace=@repo/db && npm run build --workspace=http",
+    "build:ws": "npm run build --workspace=@repo/db && npm run build --workspace=meta-verse-ws",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

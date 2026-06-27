@@ -19,7 +19,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "generate": "DATABASE_URL=postgresql://dummy:dummy@dummy/dummy npx prisma generate",
     "migrate": "npx prisma migrate deploy",
-    "build": "npm run generate && rm -rf dist && tsc && cp -r generated dist/"
+    "build": "npm run generate && rm -rf dist tsconfig.tsbuildinfo && tsc && cp -r generated dist/ && test -f dist/index.d.ts"
   },
   "keywords": [],
   "type": "module",
