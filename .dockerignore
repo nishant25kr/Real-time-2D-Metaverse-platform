@@ -1,0 +1,12 @@
+node_modules
+dist
+.turbo
+.git
+.env
+.env.*
+*.md
+tests
+coverage
+.DS_Store
+npm-debug.log*
+apps/frontend/dist

@@ -7,7 +7,12 @@ const wsPkg = require("ws");
 
 const WSServer = wsPkg.Server;
 
-const wss = new WSServer({ port: 8080 });
+const port = Number(process.env.PORT) || 8080;
+const wss = new WSServer({ port });
+
+wss.on("listening", () => {
+  console.log(`WebSocket server running on port ${port}`);
+});
 
 wss.on("connection", (ws: WebSocket) => {
   console.log('WebSocket Client Connected');

@@ -3,11 +3,14 @@ import { PrismaClient } from "../generated/prisma/index.js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
-const isCloud = process.env.DATABASE_URL?.includes("render.com");
+const needsSsl =
+  process.env.DATABASE_SSL === "true" ||
+  process.env.DATABASE_URL?.includes("render.com") ||
+  process.env.DATABASE_URL?.includes("amazonaws.com");
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: isCloud ? { rejectUnauthorized: false } : false,
+  ssl: needsSsl ? { rejectUnauthorized: false } : false,
 });
 
 // Avoid crashing on pool errors

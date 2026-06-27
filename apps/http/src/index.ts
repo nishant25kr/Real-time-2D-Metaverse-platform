@@ -10,7 +10,10 @@ dotenv.config()
     // console.log("client",client)
 // }, 2000);
 const app = express()
-app.use(cors())
+const corsOrigin = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((url) => url.trim())
+  : true
+app.use(cors({ origin: corsOrigin }))
 app.use(express.json())
 app.use("/api/v1",router)
 
