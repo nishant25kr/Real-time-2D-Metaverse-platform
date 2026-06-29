@@ -8,10 +8,10 @@ export class MeetingRoomManager {
     constructor() {   
         this.meetingRooms = new Map();
         this.occupiedChair = []
-        setInterval(() => {
-            console.log("Current Meeting Rooms and their user counts:")
-            console.log(this.occupiedChair  )
-        }, 2000);
+        // setInterval(() => {
+        //     console.log("Current Meeting Rooms and their user counts:")
+        //     console.log(this.meetingRooms  )
+        // }, 2000);
     }
 
     static getInstance() {

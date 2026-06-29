@@ -1,7 +1,6 @@
 import type WebSocket from "ws";
 import type { OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
-import { string } from "zod";
 
 export class MeetingRoom{
     public roomId: string;
@@ -9,6 +8,9 @@ export class MeetingRoom{
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];
+        setInterval(() => {
+            console.log(`Current users in room ${this.roomId}: ${this.users.map(u => u.userId).join(", ")}`);
+        }, 2000);
     }
 
     private canSend(ws: WebSocket) {
@@ -25,7 +27,7 @@ export class MeetingRoom{
     }
 
     public addUser(user: User){
-        if(this.users.find( u => u.id === user.id)) return;
+        if(this.users.find( u => u.userId === user.userId)) return;
         this.users.push(user)
         const length = this.users.length
         if(length < 2) return;
