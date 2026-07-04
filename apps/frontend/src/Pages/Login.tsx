@@ -29,17 +29,7 @@ export const Login = () => {
             localStorage.setItem("token", token);
             localStorage.setItem("userId", userId);
 
-            // const avatarRes = await axios.get(
-            //     `${import.meta.env.VITE_BACKEND_URL}/api/v1/user/metadata/bulk?ids=["${userId}"]`,
-            //     { headers: { authorization: `Bearer ${token}` } }
-    // );
-            // const avatarId = avatarRes.data?.avatars?.[0]?.avatarId;
-
-            // if (!avatarId) {
-                navigate(`/avatar/?signup_token=${token}`);
-            // } else {
-                // navigate("/dashboard");
-            // }
+            navigate(`/avatar/?signup_token=${token}`);
         } catch (err: any) {
             setError(err?.response?.data?.message || "Login failed. Please try again.");
         } finally {
