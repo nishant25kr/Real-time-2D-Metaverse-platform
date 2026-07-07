@@ -20,9 +20,9 @@ export const Signup = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/api/v1/signup`,
                 { username, password, type }
             )
-
-            localStorage.setItem("userId", res.data.userId)
-            navigation("/login")
+            if(res.status === 200){
+                navigation("/login")
+            }
         } catch (err: any) {
             setError(err?.response?.data?.message || "Signup failed. Please try again.")
         } finally {

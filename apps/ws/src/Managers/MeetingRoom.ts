@@ -1,13 +1,15 @@
 import type WebSocket from "ws";
-import type { OutgoingMessage } from "src/types.js";
+import type { MessageSchema, OutgoingMessage } from "src/types.js";
 import type { User } from "./User.js";
 
 export class MeetingRoom{
     public roomId: string;
     private users : User[];
+    private messages: MessageSchema[]
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];
+        this.messages = [];
         setInterval(() => {
             console.log(`Current users in room ${this.roomId}: ${this.users.map(u => u.userId).join(", ")}`);
         }, 2000);
@@ -109,6 +111,10 @@ export class MeetingRoom{
                 }
             });
         }
+    }
+
+    public addMessage(user: User, payload: MessageSchema){
+        this.messages.push(payload)
     }
 
 }
