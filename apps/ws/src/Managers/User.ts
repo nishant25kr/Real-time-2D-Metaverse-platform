@@ -51,6 +51,7 @@ export class User {
                     console.log("inside join")
                     const spaceID = parsedData.payload.spaceId
                     const token = parsedData.payload.token
+                    console.log("token",token)
                     const passcode = parsedData.payload.passcode
                     let user;
                     try {
@@ -60,6 +61,7 @@ export class User {
                         this.ws.close();
                         return;
                     }
+                    console.log("user",user)
                     const id = this.userId = (user as jwt.JwtPayload).userId;
                     if (!id) {
                         this.ws.close();
@@ -198,6 +200,12 @@ export class User {
                         this
                     )
                     break;
+                
+                case "send-message":
+                    console.log("inside send message",parsedData.data)
+
+                case "recieve-message":
+                    console.log("inside recieve message",parsedData.data)
 
                 case "offer":
                     MeetingRoomManager.getInstance().onOffer(

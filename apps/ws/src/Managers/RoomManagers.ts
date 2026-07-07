@@ -3,6 +3,7 @@ import type { User } from "./User.js";
 
 export class RoomManager {
     rooms: Map<string, User[]> = new Map()
+    
     static instance: RoomManager
     
     constructor() {
@@ -22,6 +23,7 @@ export class RoomManager {
             return;
         }
         this.rooms.set(spaceId, [...(this.rooms.get(spaceId) ?? []), user])
+        console.log(this.rooms)
     }
 
     public broadcast(message: OutgoingMessage, user: User, roomId: string) {
