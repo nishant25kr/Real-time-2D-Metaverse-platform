@@ -1,5 +1,6 @@
 import type { User } from "./User.js";
 import { MeetingRoom } from "./MeetingRoom.js";
+import type { MessageSchema } from "src/types.js";
 
 export class MeetingRoomManager {
     meetingRooms: Map<string, Map<string, MeetingRoom> > = new Map()
@@ -100,5 +101,11 @@ export class MeetingRoomManager {
         })
         return res;
     }
-
+//todo : add message schena and test the chat 
+    public addMessage(user: User, payload: any){
+        const room = this.meetingRooms.get(user.spaceId)?.get(payload.roomId)
+        if(!room) return;
+        room.addMessage(payload)
+        
+    }
 }
