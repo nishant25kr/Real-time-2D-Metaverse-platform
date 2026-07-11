@@ -18,6 +18,7 @@ export const Arena = () => {
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
   const [loading, setLoading] = useState(true);
+  const [sendingmessage, setSendingmessage] = useState<string>('')
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
@@ -389,7 +390,7 @@ export const Arena = () => {
           <canvas ref={canvasRef} className="bg-white block" />
         </div>
 
-        {(insideRoom || onTheTable) && (
+        {/* {(insideRoom || onTheTable) && ( */}
           <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
             <div className="px-4 py-3 border-b border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Participants</p>
@@ -426,8 +427,24 @@ export const Arena = () => {
                 <p className="text-xs text-gray-400 text-center mt-4">No one else is here yet.</p>
               )}
             </div>
+
+            <div className='border'>
+              <input type="text" onChange={(e)=> setSendingmessage(e.target.value)} />
+              <button onClick={()=>{
+                wsRef.current?.send(JSON.stringify({
+                  type: 'send-message',
+                  payload:{
+                   message:sendingmessage,
+                   createdat: Date.now() ,
+                   userId: currentUserRef.current?.userId,
+                   roomId: currentRoomRef.current 
+                  } 
+                }));
+              }}>send</button>
+            </div>
           </div>
-        )}
+          
+        {/* )} */}
       </div>
     </div>
   );

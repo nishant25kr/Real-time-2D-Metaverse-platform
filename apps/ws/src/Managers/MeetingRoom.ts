@@ -5,7 +5,7 @@ import type { User } from "./User.js";
 export class MeetingRoom{
     public roomId: string;
     private users : User[];
-    private messages: MessageSchema[]
+    public messages: MessageSchema[]
     constructor(roomId: string){
         this.roomId = roomId;
         this.users = [];
@@ -113,7 +113,7 @@ export class MeetingRoom{
         }
     }
 
-    public addMessage(user: User, payload: MessageSchema){
+    public addMessage(payload: MessageSchema){
         this.messages.push(payload)
     }
 

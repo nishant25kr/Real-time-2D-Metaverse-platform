@@ -202,10 +202,13 @@ export class User {
                     break;
                 
                 case "send-message":
-                    console.log("inside send message",parsedData.data)
+                    console.log("inside send message",parsedData)
+                    MeetingRoomManager.getInstance().addMessage(this,parsedData.payload)
+                    break;
 
                 case "recieve-message":
-                    console.log("inside recieve message",parsedData.data)
+                    console.log("inside recieve message",parsedData)
+                    break;
 
                 case "offer":
                     MeetingRoomManager.getInstance().onOffer(
