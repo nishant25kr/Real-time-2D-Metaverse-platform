@@ -101,7 +101,7 @@ export class MeetingRoomManager {
         })
         return res;
     }
-//todo : add message schena and test the chat 
+        //todo : add message schena and test the chat 
     public addMessage(user: User, payload: any){
         const room = this.meetingRooms.get(user.spaceId)?.get(payload.roomId)
         if(!room) return;
