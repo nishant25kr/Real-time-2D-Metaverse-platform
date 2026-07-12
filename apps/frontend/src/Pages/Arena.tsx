@@ -228,6 +228,9 @@ export const Arena = () => {
         others.forEach((id) => sendOffer(id, meetingId));
         break;
       }
+      case "recieve-message":{
+        console.log("message",msg)
+      }
     }
   }, [cleanupPeer, receiveOffer, receiveAnswer, addIceCandidate, sendOffer]);
 

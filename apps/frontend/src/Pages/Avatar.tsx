@@ -42,7 +42,6 @@ export const Avatar = () => {
                 { avatarId: selectedId },
                 { headers: { authorization: `Bearer ${signup_token}` } }
             );
-            console.log("res:",res)
             if (res.status === 200) {
                 navigate(`/dashboard/?token=${signup_token}`);
             }

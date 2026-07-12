@@ -144,7 +144,6 @@ export class User {
                     const lasty = this.y;
                     if ((Xdisplacement <= 1 && Ydisplacement <= 1) && (Xdisplacement + Ydisplacement > 0)) {
                         const res = MeetingRoomManager.getInstance().checkOccupiedChair(moveX, moveY)
-                        console.log("res", res)
                         if (res) {
                             this.safeSend({
                                 type: "movement-rejected",
@@ -206,9 +205,9 @@ export class User {
                     MeetingRoomManager.getInstance().addMessage(this,parsedData.payload)
                     break;
 
-                case "recieve-message":
-                    console.log("inside recieve message",parsedData)
-                    break;
+                // case "recieve-message":
+                //     console.log("inside recieve message",parsedData)
+                //     break;
 
                 case "offer":
                     MeetingRoomManager.getInstance().onOffer(

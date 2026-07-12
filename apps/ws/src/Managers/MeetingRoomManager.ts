@@ -9,10 +9,6 @@ export class MeetingRoomManager {
     constructor() {   
         this.meetingRooms = new Map();
         this.occupiedChair = []
-        // setInterval(() => {
-        //     console.log("Current Meeting Rooms and their user counts:")
-        //     console.log(this.meetingRooms  )
-        // }, 2000);
     }
 
     static getInstance() {
@@ -93,9 +89,7 @@ export class MeetingRoomManager {
     public checkOccupiedChair(x: number, y: number) {
         let res = false;
         this.occupiedChair.forEach(i => {
-            console.log("i",i)
             if(i.x == x && i.y == y){
-                console.log("found")
                 res = true;
             } 
         })
@@ -104,8 +98,18 @@ export class MeetingRoomManager {
         //todo : add message schena and test the chat 
     public addMessage(user: User, payload: any){
         const room = this.meetingRooms.get(user.spaceId)?.get(payload.roomId)
+
         if(!room) return;
-        room.addMessage(payload)
+        const message: MessageSchema = {
+            id: Math.random()+"hello",
+            groupId: "",
+            senderId: payload.userId,
+            message: payload.message,
+            createdAt: payload.createdat,
+            edited: false,
+            deleted: false,
+        }
+        room.addMessage(message,user)
         
     }
 }

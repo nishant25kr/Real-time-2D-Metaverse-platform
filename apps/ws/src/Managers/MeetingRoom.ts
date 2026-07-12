@@ -10,11 +10,9 @@ export class MeetingRoom{
         this.roomId = roomId;
         this.users = [];
         this.messages = [];
-        setInterval(() => {
-            console.log(`Current users in room ${this.roomId}: ${this.users.map(u => u.userId).join(", ")}`);
-        }, 2000);
-    }
 
+    }
+    
     private canSend(ws: WebSocket) {
         return ws.readyState === 1;
     }
@@ -57,11 +55,16 @@ export class MeetingRoom{
         });
     }
 
-    public broadcast(message: OutgoingMessage, user: User, meetingId: string){
+    public broadcast(message: OutgoingMessage, user: User){
         if(!this.users.find(u => u.id === user.id)) return;
         this.users.forEach((u)=>{
             if(u.id !== user.id){
-                this.safeSend(u.ws, message);
+                this.safeSend(u.ws, {
+                    type: "recieve-message",
+                    payload:{
+                        message: message
+                    }
+                });
             }
         })
     }
@@ -113,8 +116,11 @@ export class MeetingRoom{
         }
     }
 
-    public addMessage(payload: MessageSchema){
-        this.messages.push(payload)
+    public addMessage(payload: MessageSchema,user: User){
+        // const user = this.users.find((u)=> u.id = payload.senderId)
+        if(!user) return 
+        this.messages.push(payload) 
+        this.broadcast(payload, user)
     }
 
 }
