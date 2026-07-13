@@ -53,3 +53,34 @@ export interface DynamicComponentProps {
   text: string;
 }
 
+export type MessageSchema = {
+  id: string;
+  groupId: string;
+  senderId: string;
+  message: string;
+  createdAt: Date;
+  edited: boolean;
+  deleted: boolean;
+};
+
+export type WsMessage =
+  | {
+      type: 'space-joined';
+      payload: {
+        spawn: { x: number; y: number };
+        yourId: string;
+        username: string;
+        avatar: { id: string; imageUrl: string; name: string };
+        users: { id: string; x: number; y: number; username: string; avatar: { id: string; imageUrl: string; name: string } }[];
+      };
+    }
+  | { type: 'user-joined'; payload: { id: string; x: number; y: number; username: string; avatar: { id: string; imageUrl: string; name: string } } }
+  | { type: 'move'; payload: { id: string; x: number; y: number } }
+  | { type: 'movement-rejected'; payload: { x: number; y: number } }
+  | { type: 'user-left'; payload: { id: string } }
+  | { type: 'user-left-meeting'; payload: { userId: string } }
+  | { type: 'offer'; payload: Record<string, unknown> }
+  | { type: 'answer'; payload: Record<string, unknown> }
+  | { type: 'add-ice-candidate'; payload: Record<string, unknown> }
+  | { type: 'init-call'; payload: { meetingId: string; id: string[] } }
+  | { type: 'recieve-message'; payload: { message: MessageSchema } };

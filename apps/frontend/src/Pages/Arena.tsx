@@ -6,17 +6,8 @@ import { useWebRTC } from '../hooks/Usewebrtc';
 import { useArenaCanvas } from '../hooks/Usearenacanvas';
 import { useRoomPresence } from '../hooks/Useroompresence';
 import { useCoordinates } from '../hooks/Usecoordinates';
-import type { User } from '../types';
-
-export type MessageSchema={
-  id: string;
-  groupId: string;
-  senderId: string;
-  message: string;
-  createdAt: Date;
-  edited: boolean;
-  deleted: boolean;
-}
+import { Sidebar } from '../Components/Sidebar';
+import type { User, WsMessage, MessageSchema } from '../types';
 
 export const Arena = () => {
   const navigate = useNavigate();
@@ -29,12 +20,11 @@ export const Arena = () => {
   const [onTheTable, setOnTheTable] = useState(false)
   const [messages, setMessages] = useState<MessageSchema[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sendingmessage, setSendingmessage] = useState<string>('')
 
   const currentUserRef = useRef<User | null>(null);
   const onTheChairRef = useRef(false);
   const lastPosition = useRef<{ x: number; y: number } | null>(null);
-  const onMessageRef = useRef<((msg: any) => void) | null>(null);
+  const onMessageRef = useRef<((msg: WsMessage) => void) | null>(null);
 
   const { localStream, streamRef, getAccess, stopAll } = useMedia();
 
@@ -75,7 +65,7 @@ export const Arena = () => {
       const match = coords.find((c) => c.x === x && c.y === y);
       if (!match) { setMessage('Go near a chair'); return undefined; }
 
-      setMessage('Cmd+I to sit');
+      setMessage('⌘/Ctrl+I to sit');
 
       if (roomName === "Table") {
         for (const item of INDIVIDUAL_TABLES) {
@@ -101,7 +91,7 @@ export const Arena = () => {
         return { x: cx, y: cy };
       }
 
-      setMessage('Press Cmd+I to sit');
+      setMessage('⌘/Ctrl+I to sit');
       return undefined;
     },
     [validCoordinates]
@@ -146,7 +136,7 @@ export const Arena = () => {
 
   }, [checkRoomPresence, streamRef, getAccess, stopAll, cleanupAllPeers, sendMove]);
   
-  const handleWebSocketMessage = useCallback(async (msg: any) => {
+  const handleWebSocketMessage = useCallback(async (msg: WsMessage) => {
     switch (msg.type) {
 
       case 'space-joined': {
@@ -252,7 +242,7 @@ export const Arena = () => {
     const user = currentUserRef.current;
     if (!user) return;
 
-    if (e.metaKey && e.key.toLowerCase() === 'k') {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
       if (!onTheChairRef.current) return;
       const pos = lastPosition.current ?? { x: user.x, y: user.y };
       onTheChairRef.current = false;
@@ -261,13 +251,14 @@ export const Arena = () => {
       const updated: User = { ...user, ...pos };
       currentUserRef.current = updated;
       setCurrentUser(updated);
+      setMessage('Go near a chair');
       handleMove(pos.x, pos.y, false);
       return;
     }
 
     if (onTheChairRef.current) return;
     if (onTheChair) return;
-    if (e.metaKey && e.key.toLowerCase() === 'i') {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'i') {
       if (!insideRoomRef.current) {
         const tableseat = findNearbyChairCell(user.x, user.y, "Table");
         if (!tableseat || !tableseat.x || !tableseat.y) return;
@@ -277,6 +268,7 @@ export const Arena = () => {
           onTheChairRef.current = true;
           setOnTheChair(true);
           setOnTheTable(true)
+          setMessage('⌘/Ctrl+K to stand');
           const seated: User = { ...user, ...tableseat };
           currentUserRef.current = seated;
           setCurrentUser(seated);
@@ -289,6 +281,7 @@ export const Arena = () => {
         lastPosition.current = { x: user.x, y: user.y };
         onTheChairRef.current = true;
         setOnTheChair(true);
+        setMessage('⌘/Ctrl+K to stand');
         const seated: User = { ...user, ...seat };
         currentUserRef.current = seated;
         setCurrentUser(seated);
@@ -321,8 +314,8 @@ export const Arena = () => {
     const spaceId = params.get('spaceId') ?? '';
     const passcode = params.get('passcode') ?? '';
 
-    const ws = new WebSocket('ws://localhost:8080/');
-    // const ws = new WebSocket(import.meta.env.VITE_WS_URL);
+    // const ws = new WebSocket('ws://localhost:8080/');
+    const ws = new WebSocket(import.meta.env.VITE_WS_URL || 'ws://localhost:8080/');
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -337,7 +330,7 @@ export const Arena = () => {
     };
 
     ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data as string);
+      const msg = JSON.parse(event.data as string) as WsMessage;
       onMessageRef.current?.(msg);
     };
 
@@ -406,73 +399,24 @@ export const Arena = () => {
         </div>
 
         {(insideRoom || onTheTable) && (
-          <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Participants</p>
-            </div>
-
-            <div className="flex flex-col gap-3 p-4 overflow-y-auto flex-1">
-              {localStream ? (
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs text-gray-400">You</p>
-                  <video
-                    autoPlay playsInline muted
-                    ref={(el) => { if (el) el.srcObject = localStream; }}
-                    className="w-full aspect-video bg-gray-100 object-cover rounded-lg border border-gray-200"
-                  />
-                </div>
-              ) : (
-                <div className="w-full aspect-video bg-gray-100 rounded-lg border border-dashed border-gray-200 flex items-center justify-center">
-                  <p className="text-xs text-gray-400">Camera off</p>
-                </div>
-              )}
-
-              {Array.from(remoteStreams.entries()).map(([userId, stream]) => (
-                <div key={userId} className="flex flex-col gap-1.5">
-                  <p className="text-xs text-gray-400 truncate">{userId.slice(0, 8)}…</p>
-                  <video
-                    autoPlay playsInline
-                    ref={(el) => { if (el) el.srcObject = stream; }}
-                    className="w-full aspect-video bg-gray-100 object-cover rounded-lg border border-gray-200"
-                  />
-                </div>
-              ))}
-
-              {!localStream && remoteStreams.size === 0 && (
-                <p className="text-xs text-gray-400 text-center mt-4">No one else is here yet.</p>
-              )}
-            </div>
-              <div>
-                <p className="text-sm font-medium text-gray-700">Messages</p>
-                <div className='h-40 overflow-y-auto border'>
-                  {messages.map((msg, index) => (
-                    <div key={index} className='p-2 border-b'>
-                      <p className='text-sm font-medium text-gray-700'>{msg.senderId}</p>
-                      <p className='text-sm text-gray-500'>{msg.message}</p>
-                    </div>
-                  ))}
-                </div>
-
-              </div>
-            <div className='border'>
-              <div className="p-2">
-                <p className="text-sm font-medium text-gray-700">Send a message</p>
-              </div>
-              <input type="text" onChange={(e)=> setSendingmessage(e.target.value)} />
-              <button onClick={()=>{
-                wsRef.current?.send(JSON.stringify({
-                  type: 'send-message',
-                  payload:{
-                   message:sendingmessage,
-                   createdat: Date.now() ,
-                   userId: currentUserRef.current?.userId,
-                   roomId: currentRoomRef.current 
-                  } 
-                }));
-              }}>send</button>
-            </div>
-          </div>  
-          )}
+          <Sidebar
+            localStream={localStream}
+            remoteStreams={remoteStreams}
+            messages={messages}
+            currentUserId={currentUserRef.current?.userId}
+            onSendMessage={(msg) => {
+              wsRef.current?.send(JSON.stringify({
+                type: 'send-message',
+                payload: {
+                  message: msg,
+                  createdat: Date.now(),
+                  userId: currentUserRef.current?.userId,
+                  roomId: currentRoomRef.current,
+                },
+              }));
+            }}
+          />
+        )}
         </div>
     </div>
   );
