@@ -8,6 +8,16 @@ import { useRoomPresence } from '../hooks/Useroompresence';
 import { useCoordinates } from '../hooks/Usecoordinates';
 import type { User } from '../types';
 
+export type MessageSchema={
+  id: string;
+  groupId: string;
+  senderId: string;
+  message: string;
+  createdAt: Date;
+  edited: boolean;
+  deleted: boolean;
+}
+
 export const Arena = () => {
   const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
@@ -17,6 +27,7 @@ export const Arena = () => {
   const [message, setMessage] = useState('Go near a chair');
   const [onTheChair, setOnTheChair] = useState(false);
   const [onTheTable, setOnTheTable] = useState(false)
+  const [messages, setMessages] = useState<MessageSchema[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingmessage, setSendingmessage] = useState<string>('')
 
@@ -229,6 +240,7 @@ export const Arena = () => {
         break;
       }
       case "recieve-message":{
+        setMessages((prev) => [...prev, msg.payload.message]);
         console.log("message",msg)
       }
     }
@@ -393,7 +405,7 @@ export const Arena = () => {
           <canvas ref={canvasRef} className="bg-white block" />
         </div>
 
-        {/* {(insideRoom || onTheTable) && ( */}
+        {(insideRoom || onTheTable) && (
           <div className="w-72 flex flex-col border-l border-gray-100 bg-white shrink-0">
             <div className="px-4 py-3 border-b border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Participants</p>
@@ -430,8 +442,22 @@ export const Arena = () => {
                 <p className="text-xs text-gray-400 text-center mt-4">No one else is here yet.</p>
               )}
             </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Messages</p>
+                <div className='h-40 overflow-y-auto border'>
+                  {messages.map((msg, index) => (
+                    <div key={index} className='p-2 border-b'>
+                      <p className='text-sm font-medium text-gray-700'>{msg.senderId}</p>
+                      <p className='text-sm text-gray-500'>{msg.message}</p>
+                    </div>
+                  ))}
+                </div>
 
+              </div>
             <div className='border'>
+              <div className="p-2">
+                <p className="text-sm font-medium text-gray-700">Send a message</p>
+              </div>
               <input type="text" onChange={(e)=> setSendingmessage(e.target.value)} />
               <button onClick={()=>{
                 wsRef.current?.send(JSON.stringify({
@@ -445,10 +471,9 @@ export const Arena = () => {
                 }));
               }}>send</button>
             </div>
-          </div>
-          
-        {/* )} */}
-      </div>
+          </div>  
+          )}
+        </div>
     </div>
   );
 };

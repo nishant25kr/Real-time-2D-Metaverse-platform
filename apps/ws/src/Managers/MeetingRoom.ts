@@ -58,14 +58,12 @@ export class MeetingRoom{
     public broadcast(message: OutgoingMessage, user: User){
         if(!this.users.find(u => u.id === user.id)) return;
         this.users.forEach((u)=>{
-            if(u.id !== user.id){
                 this.safeSend(u.ws, {
                     type: "recieve-message",
                     payload:{
                         message: message
                     }
                 });
-            }
         })
     }
 
