@@ -271,6 +271,9 @@ export const Arena = () => {
           setMessage('⌘/Ctrl+K to stand');
           const seated: User = { ...user, ...tableseat };
           currentUserRef.current = seated;
+          if(tableseat?.name){
+            currentRoomRef.current = tableseat.name;
+          }
           setCurrentUser(seated);
           handleMove(seats.x, seats.y, true, true, tableseat?.name);
         }
