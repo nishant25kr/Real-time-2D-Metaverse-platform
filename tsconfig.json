@@ -2,5 +2,6 @@
   "compilerOptions": {
     /* Base settings shared across packages */
     "baseUrl": ".",
+    "ignoreDeprecations": "6.0"
   }
 }
